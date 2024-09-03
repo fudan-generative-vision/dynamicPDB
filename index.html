@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- Meta tags for social media banners, these should be filled in appropriatly as they are your "business card" -->
+  <!-- Replace the content tag with appropriate information -->
+  <meta name="description" content="DESCRIPTION META TAG">
+  <meta property="og:title" content="SOCIAL MEDIA TITLE TAG"/>
+  <meta property="og:description" content="SOCIAL MEDIA DESCRIPTION TAG TAG"/>
+  <meta property="og:url" content="URL OF THE WEBSITE"/>
+  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
+  <meta property="og:image" content="static/image/your_banner_image.png" />
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+
+
+  <meta name="twitter:title" content="TWITTER BANNER TITLE META TAG">
+  <meta name="twitter:description" content="TWITTER BANNER DESCRIPTION META TAG">
+  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X600-->
+  <meta name="twitter:image" content="static/images/your_twitter_banner_image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Keywords for your paper to be indexed by-->
+  <meta name="keywords" content="KEYWORDS SHOULD BE PLACED HERE">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <title>Dynamic PDB</title>
+  <!-- <link rel="icon" type="image/x-icon" href="static/images/favicon.ico"> -->
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+  rel="stylesheet">
+
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script src="static/js/bulma-carousel.min.js"></script>
+  <script src="static/js/bulma-slider.min.js"></script>
+  <script src="static/js/index.js"></script>
+</head>
+<body>
+
+
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title" style="font-size: 2.5rem; line-height: 1.2;">
+              <span style="color: red;">Dynamic PDB</span>: A New Dataset and a SE(3) Model Extension by Integrating Dynamic Behaviors and Physical Properties in Protein Structures</h1>
+            <div class="is-size-5 publication-authors">
+              <!-- Paper authors -->
+              <span class="author-block">
+                Ce Liu<sup>1*</sup>,</span>
+              <span class="author-block">
+                Jun Wang<sup>1*</sup>,</span>
+              <span class="author-block">
+                Zhiqiang Cai<sup>1*</sup>,</span>
+              <span class="author-block">
+                Yingxu Wang<sup>1,3</sup>,</span>
+              <span class="author-block">
+                Huizhen Kuang<sup>1,2</sup>,</span>
+              <span class="author-block">
+                Kaihui Cheng<sup>1,2</sup>,</span>
+              <span class="author-block">
+                Liwei Zhang<sup>1</sup>,</span>
+              <span class="author-block">
+                Qingkun Su<sup>1</sup>,</span>
+              <span class="author-block">
+                Yining Tang<sup>1</sup>,</span>
+              <span class="author-block">
+                Fenglei Cao<sup>1</sup>,</span>
+              <span class="author-block">
+                Limei Han<sup>1</sup>,</span>
+              <span class="author-block">
+                <a href="https://sites.google.com/site/zhusiyucs/home/" target="_blank">Siyu Zhu</a><sup>1,2†</sup>,</span>
+              <span class="author-block">
+                Yuan Qi<sup>1,2†</sup>
+                  </span>
+                  </div>
+
+                  <div class="is-size-5 publication-authors">
+                    <span class="author-block"><sup>1</sup>Shanghai Academy of Artificial Intelligence for Science</span>
+                    <span class="author-block"><sup>2</sup>Fudan University</span>
+                    <span class="author-block"><sup>3</sup>Mohamed bin Zayed University of Artificial Intelligence</span>
+                    <span class="eql-cntrb"><small><br><sup>*</sup>Equal Contribution, <sup>†</sup>Corresponding Author</small></span>
+                  </div>
+
+                  <div class="column has-text-centered">
+                    <div class="publication-links">
+                         <!-- Arxiv PDF link -->
+                      <span class="link-block">
+                        <a href="https://arxiv.org/abs/2408.12413" target="_blank"
+                        class="external-link button is-normal is-rounded is-dark">
+                        <span class="icon">
+                          <i class="fas fa-file-pdf"></i>
+                        </span>
+                        <span>Paper</span>
+                      </a>
+                    </span>
+
+                    <!-- Supplementary PDF link -->
+                    <!-- <span class="link-block">
+                      <a href="static/pdfs/supplementary_material.pdf" target="_blank"
+                      class="external-link button is-normal is-rounded is-dark">
+                      <span class="icon">
+                        <i class="fas fa-file-pdf"></i>
+                      </span>
+                      <span>Supplementary</span>
+                    </a>
+                  </span> -->
+
+                  <!-- Github link -->
+                  <span class="link-block">
+                    <a href="https://github.com/fudan-generative-vision/dynamicPDB" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-github"></i>
+                    </span>
+                    <span>Data Access</span>
+                  </a>
+                </span>
+
+                <!-- ArXiv abstract Link -->
+                <span class="link-block">
+                  <a href="https://arxiv.org/abs/2408.12413" target="_blank"
+                  class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                    <i class="ai ai-arxiv"></i>
+                  </span>
+                  <span>arXiv</span>
+                </a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Paper abstract -->
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            Despite significant progress in static protein structure collection and prediction, the dynamic behavior of proteins, one of their most vital characteristics, has been largely overlooked in prior research. This oversight can be attributed to the limited availability, diversity, and heterogeneity of dynamic protein datasets. To address this gap, we propose to enhance existing prestigious static 3D protein structural databases, such as the Protein Data Bank (PDB), by integrating dynamic data and additional physical properties. Specifically, we introduce a large-scale dataset encompassing approximately 12.6K proteins, each subjected to all-atom molecular dynamics (MD) simulations lasting 1 microsecond to capture conformational changes. Furthermore, we provide a comprehensive suite of physical properties, including atomic velocities and forces, potential and kinetic energies of proteins, and the temperature of the simulation environment, recorded at 1 picosecond intervals throughout the simulations. For benchmarking purposes, we evaluate state-of-the-art methods on the proposed dataset for the task of trajectory prediction. To demonstrate the value of integrating richer physical properties in the study of protein dynamics and related model design, we base our approach on the SE(3) diffusion model and incorporate these physical properties into the trajectory prediction process. Preliminary results indicate that this straightforward extension of the SE(3) model yields improved accuracy, as measured by MAE and RMSD, when the proposed physical properties are taken into consideration.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- End paper abstract -->
+
+
+<!-- Image carousel -->
+<section class="hero is-small">
+    <div class="hero-body">
+      <div class="container">
+      <h2 class="title is-3">Flowchart, attributes and statistics of dynamic PDB</h2>
+        <div id="results-carousel" class="carousel results-carousel">
+         <div class="item">
+          <!-- Your image here -->
+          <img src="static/images/flow_attr.png" alt="MY ALT TEXT" style="max-width: 82%; height: auto; display: block; margin: 0 auto;"/>
+          <h2 class="subtitle has-text-centered">
+            Flowchart of dynamic PDB construction (left) and attributes contained in dataset (right).
+          </h2>
+        </div>
+        <div class="item">
+          <!-- Your image here -->
+          <img src="static/images/stat.png" alt="MY ALT TEXT" style="max-width: 67%; height: auto; display: block; margin: 0 auto;"/>
+          <h2 class="subtitle has-text-centered">
+            Overall statistics of dynamic PDB on protein length and secondary structure.
+          </h2>
+        </div>
+        <div class="item">
+          <!-- Your image here -->
+          <img src="static/images/pie_phys.png" alt="MY ALT TEXT" style="max-width: 75%; height: auto; display: block; margin: 0 auto;"/>
+          <h2 class="subtitle has-text-centered">
+            The percentage of proteins by different complementing methods (left) and statistics of the protein <b><i>3TVJ_I</i></b> on MD forces, velocities, temperature and potential energy from force field (right).
+         </h2>
+       </div>
+    </div>
+  </div>
+  </div>
+  </section>
+  <!-- End image carousel -->
+
+
+<!-- Image carousel -->
+<section class="hero is-small">
+  <div class="hero-body">
+    <div class="container">
+    <h2 class="title is-3">Examples of protein MD simulations from dynamic PDB</h2>
+      <div id="results-carousel" class="carousel results-carousel">
+       <div class="item">
+        <!-- Your image here -->
+        <img src="static/images/3tvj.png" alt="MY ALT TEXT" style="max-width: 75%; height: auto; display: block; margin: 0 auto;"/>
+        <h2 class="subtitle has-text-centered">
+            The conformational evolution and statistics of protein <b><i>3TVJ_I</i></b>. a) The regions with the most significant changes in the RMSD (Root Mean Square Deviation) and gyration radius curves over time correspond to potential conformational changes. b) The contact map frequency illustrates the changes in interactions between residues within the protein. c) The Ramachandran plot provides insight into the dihedral angles of the protein backbone, indicating the structural validity of the protein conformation.
+        </h2>
+      </div>
+      <div class="item">
+        <!-- Your image here -->
+        <img src="static/images/4ue8.png" alt="MY ALT TEXT" style="max-width: 82%; height: auto; display: block; margin: 0 auto;"/>
+        <h2 class="subtitle has-text-centered">
+            The conformational evolution and statistics of protein <b><i>4UE8_B</i></b>. a) The regions with the most significant changes in the RMSD (Root Mean Square Deviation) and gyration radius curves over time correspond to potential conformational changes. b) The contact map frequency illustrates the changes in interactions between residues within the protein. c) The Ramachandran plot provides insight into the dihedral angles of the protein backbone, indicating the structural validity of the protein conformation.
+        </h2>
+      </div>
+      <div class="item">
+        <!-- Your image here -->
+        <img src="static/images/7lp1.png" alt="MY ALT TEXT" style="max-width: 81%; height: auto; display: block; margin: 0 auto;"/>
+        <h2 class="subtitle has-text-centered">
+            The conformational evolution and statistics of protein <b><i>7LP1_B</i></b>. a) The regions with the most significant changes in the RMSD (Root Mean Square Deviation) and gyration radius curves over time correspond to potential conformational changes. b) The contact map frequency illustrates the changes in interactions between residues within the protein. c) The Ramachandran plot provides insight into the dihedral angles of the protein backbone, indicating the structural validity of the protein conformation.
+       </h2>
+     </div>
+  </div>
+</div>
+</div>
+</section>
+<!-- End image carousel -->
+
+
+<!-- Image carousel -->
+<section class="hero is-small">
+  <div class="hero-body">
+    <div class="container">
+      <h2 class="title is-3">Longer simulation time captures more protein conformational changes</h2>
+      <div class="item">
+        <!-- Your image here -->
+        <img src="static/images/rmsd.png" alt="MY ALT TEXT" style="max-width: 85%; height: auto; display: block; margin: 0 auto;"/>
+        <h2 class="subtitle has-text-centered">
+          RMSD plots for proteins from dynamic PDB and ATLAS. Longer simulation time can potentially capture more protein conformational changes, which are indicated by the red arrows.
+       </h2>
+     </div>
+    </div>
+  </div>
+</div>
+</div>
+</section>
+<!-- End image carousel -->
+
+
+<!-- Image carousel -->
+<section class="hero is-small">
+    <div class="hero-body">
+      <div class="container">
+      <h2 class="title is-3">Higher temporal resolution offers a more detailed depiction of protein's dynamics</h2>
+        <div id="results-carousel" class="carousel results-carousel">
+         <div class="item">
+          <!-- Your image here -->
+          <img src="static/images/high_res1.png" alt="MY ALT TEXT" style="max-width: 72%; height: auto; display: block; margin: 0 auto;"/>
+          <h2 class="subtitle has-text-centered">
+            Visualization of protein trajectories from dynamic PDB, stored with higher temporal resolution, offers a more detailed depiction of the protein's dynamics.
+          </h2>
+        </div>
+        <div class="item">
+          <!-- Your image here -->
+          <img src="static/images/high_res2.png" alt="MY ALT TEXT" style="max-width: 76%; height: auto; display: block; margin: 0 auto;"/>
+          <h2 class="subtitle has-text-centered">
+            Visualization of protein trajectories from dynamic PDB, stored with higher temporal resolution, offers a more detailed depiction of the protein's dynamics.
+          </h2>
+        </div>
+    </div>
+  </div>
+  </div>
+  </section>
+  <!-- End image carousel -->
+
+
+<!-- Image carousel -->
+<section class="hero is-small">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="title is-3">Applications integrating dynamic behaviors and physical properties in protein structures</h2>
+        <div class="item">
+          <!-- Your image here -->
+          <!-- <img src="static/images/stat_attr.png" alt="MY ALT TEXT" style="max-width: 80%; height: auto; display: block; margin: 0 auto;"/> -->
+          <!-- <h2 class="subtitle has-text-centered">
+            RMSD plots for proteins from dynamic PDB and ATLAS. Longer simulation time can potentially capture more protein conformational changes, which are indicated by the red arrows.
+         </h2> -->
+       </div>
+      </div>
+    </div>
+  </div>
+  </div>
+  </section>
+  <!-- End image carousel -->
+
+
+<!--BibTex citation -->
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <pre><code>@misc{liu2024dynamicpdbnewdataset,
+      title={Dynamic PDB: A New Dataset and a SE(3) Model Extension by Integrating Dynamic Behaviors and Physical Properties in Protein Structures},
+      author={Ce Liu and Jun Wang and Zhiqiang Cai and Yingxu Wang and Huizhen Kuang and Kaihui Cheng and Liwei Zhang and Qingkun Su and Yining Tang and Fenglei Cao and Limei Han and Siyu Zhu and Yuan Qi},
+      year={2024},
+      eprint={2408.12413},
+      archivePrefix={arXiv},
+      primaryClass={q-bio.BM},
+  }</code></pre>
+    </div>
+</section>
+<!--End BibTex citation -->
+
+
+  <footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+
+          <p>
+            This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+          </p>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Statcounter tracking code -->
+
+<!-- You can add a tracker to track page visits by creating an account at statcounter.com -->
+
+    <!-- End of Statcounter Code -->
+
+  </body>
+  </html>
