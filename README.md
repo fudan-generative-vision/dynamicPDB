@@ -1,6 +1,7 @@
 # Dynamic PDB Homepage
 This is the source code for **dynamic PDB** homepage.
-Paper:
+
+More details about dynamic PDB dataset, refer to the paper:
 
 ```
 @misc{liu2024dynamicpdbnewdataset,
