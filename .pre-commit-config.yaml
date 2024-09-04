@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: pylint
+        name: pylint
+        language: system
+        types: [python]
+        pass_filenames: false
+        entry: pylint
+        args: ["**/*.py"]

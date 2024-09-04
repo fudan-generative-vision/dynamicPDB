@@ -1,0 +1,172 @@
+# Default or base configuration for SE(3) diffusion experiments.
+
+defaults:
+  - override hydra/launcher: joblib
+
+data:
+  stage1: False
+  time_norm: False
+  step_split: null            # Split data into steps and randomly select a start index.
+  fix_sample_start: null      # Sample starting from a fixed index (fix_sample_start).
+  random_sample_train: False  # If True, samples are random; otherwise, sample windows do not overlap.
+  is_extrapolation: False     # Enable extrapolation mode.
+  split_percent: 0.7          # Percentage of data used for extrapolation.
+  keep_first: null            # Keep the first N time sequences.
+  dynamics: True
+  # csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/processing_atlas/test_merged_all.csv # train data path
+  # val_csv_path:  /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/processing_atlas/test_merged_all.csv # val data path
+  # # csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_b_38.csv
+  # val_csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_b_38.csv
+  # /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/test_merged_1.csv
+  # cluster_path:  /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/clusters-by-entity-30.txt
+  #csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_B_simulation_1_wj.csv # train data path
+  #val_csv_path:  /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_B_simulation_1_wj.csv # val data path
+  csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/liuce/data_10w/out.csv
+  val_csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/liuce/data_10w/out.csv
+  frame_time: 1  # the lenght of time sequence
+  frame_sample_step: 1 # random  select start index first and  split data with steps
+  filtering:
+    max_len: 256
+  #   min_len: 60
+  #   # Selects a subset of examples. Useful for debugging.
+  #   subset: null
+  #   allowed_oligomer: [monomeric]
+  #   max_helix_percent: 1.0
+  #   max_loop_percent: 0.5
+  #   min_beta_percent: -1.0
+  #   rog_quantile: 0.96
+  min_t: 0.01
+  # samples_per_eval_length: 4
+  # num_eval_lengths: 10
+  num_t: 10 # linespace for reverse diffuser for 0 to 1
+
+diffuser:
+  dynamics: ${data.dynamics}
+  frame_time: ${data.frame_time}
+  diffuse_trans: True
+  diffuse_rot: True
+
+  # R(3) diffuser arguments
+  r3:
+    min_b: 0.1
+    max_b: 20.0
+    coordinate_scaling: 0.1
+
+  # SO(3) diffuser arguments
+  so3:
+    num_omega: 1000
+    num_sigma: 1000
+    min_sigma: 0.1
+    max_sigma: 1.5
+    schedule: logarithmic
+    cache_dir: .cache/
+    use_cached_score: False
+
+model:
+  cfg_drop_rate: 0.0
+  cfg_drop_in_train: True
+  cfg_gamma: 2 # from 1 to 7.5
+  frame_time: ${data.frame_time}
+  dirtect: False   # seq to temporal structure
+  dynamics: ${data.dynamics}
+  node_embed_size: 256
+  edge_embed_size: 128
+  dropout: 0.0
+  embed:
+    DFOLDv2_embedder: True
+    # DFOLDv2_embedderv2: False
+    # Embedderv3: False
+    # node_repr_dim: 256
+    # edge_repr_dim: 128
+    index_embed_size:  32  # 32 for scratch   64 for fine-tuning model
+    aatype_embed_size: 32 # default 64
+    embed_self_conditioning: True
+    num_bins: 22
+    min_bin: 1e-5
+    max_bin: 20.0
+    skip_feature: False
+  ipa:
+    c_s: ${model.node_embed_size}
+    c_z: ${model.edge_embed_size}
+    c_hidden: 256 # default 256
+    c_skip: 64
+    no_heads: 8 # default 8
+    no_qk_points: 8  # default 8
+    no_v_points: 12  # default 12
+    seq_tfmr_num_heads: 4
+    seq_tfmr_num_layers: 2 # should be 2 if load pretrained model from 30D_04M_2024Y_20h_32m_00s
+    num_blocks: 4
+    coordinate_scaling: ${diffuser.r3.coordinate_scaling}
+    spatial: True
+    temporal: True
+    temporal_position_encoding: True
+    temporal_position_max_len: 40
+    frozen_spatial: False
+
+experiment:
+  # Experiment metadata
+  name: DFOLDv2_Temporal_${model.ipa.temporal}
+  base_root: ../DFOLDv2_res/result_v2_deep_debug
+  run_id: null
+  training: True
+
+  #training mode
+  use_ddp : True
+
+  # Training arguments
+  log_freq: 100
+  batch_size: 4
+  eval_batch_size: 1
+  num_loader_workers: 4
+  num_epoch: 300000 #500
+  learning_rate: 0.0001
+  max_squared_res: 360000
+  prefetch_factor: 100
+  use_gpu: True
+  num_gpus: 4
+  # sample_mode: cluster_time_batch
+
+  # tensorboard logging
+  wandb_dir: ./
+  use_wandb: False
+  tensorboard_dir: ${experiment.base_root}/tensorboard/
+  use_tensorboard: True
+
+  # How many steps to checkpoint between.
+  ckpt_freq: 1000
+  # Take early checkpoint at step 100. Helpful for catching eval bugs early.
+  early_ckpt: True
+
+
+  ckpt_dir: ${experiment.base_root}/ckpt/
+  use_warm_start_conf: False #True
+  warm_start: null 
+
+  trans_loss_weight: 1.0
+  rot_loss_weight: 0.5 #1.0
+  rot_loss_t_threshold: 0.2
+  separate_rot_loss: False
+  trans_x0_threshold: 1.0
+  coordinate_scaling: ${diffuser.r3.coordinate_scaling}
+  bb_atom_loss_weight: 1.0
+  bb_atom_loss_t_filter: 0.25
+  dist_mat_loss_weight: 1.0 # 0.25  
+  dist_mat_loss_t_filter: 0.25
+  aux_loss_weight: 0.25
+  torsion_loss_weight: 1.0
+
+  # validation dir.
+  eval_dir: ${experiment.base_root}/val_outputs/
+  noise_scale: 1.0
+  # Filled in during training.
+  num_parameters: null
+  trainable_num_parameters: null
+
+hydra:
+  sweeper:
+    params:
+      # Example of hydra multi run and wandb.
+      experiment.name: use_wandb
+      experiment.use_wandb: True
+  run:
+    dir: ${experiment.base_root}/out_logs/${experiment.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
