@@ -61,7 +61,23 @@
     .eql-cntrb {
       margin-top: 1rem;
     }
+
+    .custom-margin {
+      margin-left: 4rem;
+      margin-right: 6rem;
+      text-align: justify !important;
+    }
+
+    .custom-list {
+      margin-left: 8rem;
+      font-size: 1.2rem;
+    }
+
+    .second-item {
+      margin-top: 2rem;
+    }
   </style>
+
 </head>
 <body>
 
@@ -304,12 +320,24 @@
       <div class="container">
         <h2 class="title is-3">Applications integrating dynamic and physical properties</h2>
         <div class="item">
+          <h2 class="subtitle has-text-centered custom-margin">
+            To demonstrate the advantages of incorporating comprehensive physical properties into the analysis of protein dynamics and model design, we propose a SE(3) model extension to control the generation process based on conditions of amino acid sequence and physical properties. The model consists of three steps:
+          </h2>
+          <ol class="custom-list">
+            <li>Extracting features by amino acid encoder and physical properties encoder respectively</li>
+            <li>Refining node features by IPA and concatenating with the physical condition embedding.</li>
+            <li>Predicting the updated node features, torsion angles and transformations after 2D convolution.</li>
+          </ol>
           <!-- Your image here -->
-          <!-- <img src="static/images/stat_attr.png" alt="MY ALT TEXT" style="max-width: 80%; height: auto; display: block; margin: 0 auto;"/> -->
-          <!-- <h2 class="subtitle has-text-centered">
-            RMSD plots for proteins from dynamic PDB and ATLAS. Longer simulation time can potentially capture more protein conformational changes, which are indicated by the red arrows.
-         </h2> -->
+          <img src="static/images/diagram.png" alt="MY ALT TEXT" style="max-width: 70%; height: auto; display: block; margin: 0 auto;"/>
        </div>
+       <div class="item second-item">
+        <h2 class="subtitle has-text-centered custom-margin">
+          Compared with SE(3)-Trans, our results demonstrate that the incorporation of physical properties allows the predictions from our approach to align more closely with the ground truth. The first row shows the results on the protein <b><i>2ERL_A</i></b>, where our prediction on the alpha helices is more accurate. The second row shows the predicted <b><i>3TVJ_I</i></b>. Our prediction is closer to the ground truth on the beta sheets.
+        </h2>
+        <!-- Your image here -->
+        <img src="static/images/results.png" alt="MY ALT TEXT" style="max-width: 50%; height: auto; display: block; margin: 0 auto;"/>
+     </div>
       </div>
     </div>
   </div>
