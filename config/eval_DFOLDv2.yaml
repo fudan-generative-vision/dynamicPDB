@@ -1,0 +1,173 @@
+# Default or base configuration for SE(3) diffusion experiments.
+
+defaults:
+  - train_DFOLDv2
+
+data:
+  dynamics: True
+  frame_time: 5
+  frame_sample_step: 1
+  # CSV for path and metadata to training examples. /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/final_debug.csv
+  # csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/datasets/DFOLD_data/final_pdb_chains_all_limit256_with_pkl.csv
+    # '/cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/datasets/DFOLD_data/filtered_final_pdb_chains_all_limit256_with_pkl_modeled_seq_idx.csv'
+  csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/processing_atlas/train_merged_all.csv # train_merged_10_256_test.csv
+  test_csv_path:  /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/processing_atlas/test_merged_all.csv #train_merged_val.csv # sub data from train_merge.csv
+
+
+eval:
+  name: DFOLDv2_Temporal_${model.ipa.temporal}_eval
+  gpu_id: null
+  repeat_time: 1
+  random_sample: False
+
+  # Path to model weights.
+  weights_path: ./weights/paper_weights.pth
+  output_dir: ${experiment.base_root}/evaluation_outputs/
+  eval_batch_size: 1
+  # diffusion:
+  #   # Analogous to sampling temperature.
+  #   noise_scale: 0.1  # train is 1.0
+  #   # Final t.
+  #   min_t: 0.01
+  #   dynamics: ${data.dynamics}
+  #   frame_time: ${data.frame_time}
+  #   diffuse_trans: True
+  #   diffuse_rot: True
+
+  #   # R(3) diffuser arguments
+  #   r3:
+  #     min_b: 0.1
+  #     max_b: 20.0
+  #     coordinate_scaling: 0.1
+
+  #   # SO(3) diffuser arguments
+  #   so3:
+  #     num_omega: 1000
+  #     num_sigma: 1000
+  #     min_sigma: 0.1
+  #     max_sigma: 1.5
+  #     schedule: logarithmic
+  #     cache_dir: .cache/
+      # use_cached_score: False
+
+experiment:
+    use_ddp: False
+    training: False
+
+model:
+  ipa:
+    temporal: True
+
+hydra:
+  run:
+    dir: ${experiment.base_root}/eval_out_logs/${experiment.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+# diffuser:
+#   diffuse_trans: True
+#   diffuse_rot: True
+
+#   # R(3) diffuser arguments
+#   r3:
+#     min_b: 0.1
+#     max_b: 20.0
+#     coordinate_scaling: 0.1
+
+#   # SO(3) diffuser arguments
+#   so3:
+#     num_omega: 1000
+#     num_sigma: 1000
+#     min_sigma: 0.1
+#     max_sigma: 1.5
+#     schedule: logarithmic
+#     cache_dir: .cache/
+#     use_cached_score: False
+
+# model:
+#   node_embed_size: 256
+#   edge_embed_size: 128
+#   dropout: 0.0
+#   embed:
+#     # node_repr_dim: 256
+#     # edge_repr_dim: 128
+#     index_embed_size: 32
+#     aatype_embed_size: 64
+#     embed_self_conditioning: True
+#     num_bins: 22
+#     min_bin: 1e-5
+#     max_bin: 20.0
+#   ipa:
+#     c_s: ${model.node_embed_size}
+#     c_z: ${model.edge_embed_size}
+#     c_hidden: 256
+#     c_skip: 64
+#     no_heads: 8
+#     no_qk_points: 8
+#     no_v_points: 12
+#     seq_tfmr_num_heads: 4
+#     seq_tfmr_num_layers: 2
+#     num_blocks: 4
+#     coordinate_scaling: ${diffuser.r3.coordinate_scaling}
+
+# experiment:
+#   # Experiment metadata
+#   name: debug_feature_only_infer
+#   run_id: null
+
+#   #training mode
+#   use_ddp : True
+
+#   # Training arguments
+#   log_freq: 1000
+#   batch_size: 1
+#   eval_batch_size: 1
+#   num_loader_workers: 5
+#   num_epoch: 50
+#   learning_rate: 0.0001
+#   max_squared_res: 360000
+#   prefetch_factor: 100
+#   use_gpu: True
+#   num_gpus: 1
+#   sample_mode: cluster_time_batch
+
+#   # Wandb logging
+#   wandb_dir: ./
+#   use_wandb: False
+
+#   # How many steps to checkpoint between.
+#   ckpt_freq: 10000
+#   # Take early checkpoint at step 100. Helpful for catching eval bugs early.
+#   early_ckpt: True
+
+#   # Checkpoint directory to warm start from.
+#   warm_start: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckpt/debug_full_node_time/14D_04M_2024Y_23h_25m_29s/step_55000.pth
+
+#   # outputs/2024-04-05/13-05-42/train_DFOLD.log
+#   use_warm_start_conf: True
+#   ckpt_dir: ./ckpt/
+#   # warm_start: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckpt/debug/05D_04M_2024Y_13h_05m_46s/step_120000.pth
+#   # outputs/2024-04-05/13-05-42/train_DFOLD.log
+#   # use_warm_start_conf: True
+#   # Loss weights.
+#   trans_loss_weight: 1.0
+#   rot_loss_weight: 0.5
+#   rot_loss_t_threshold: 0.2
+#   separate_rot_loss: True
+#   trans_x0_threshold: 1.0
+#   coordinate_scaling: ${diffuser.r3.coordinate_scaling}
+#   bb_atom_loss_weight: 1.0
+#   bb_atom_loss_t_filter: 0.25
+#   dist_mat_loss_weight: 1.0
+#   dist_mat_loss_t_filter: 0.25
+#   aux_loss_weight: 0.25
+
+#   # Evaluation.
+#   eval_dir: ./eval_outputs_train
+#   noise_scale: 0.1
+#   # Filled in during training.
+#   num_parameters: null
+
+# hydra:
+#   sweeper:
+#     params:
+#       # Example of hydra multi run and wandb.
+#       experiment.name: use_wandb
+#       experiment.use_wandb: True

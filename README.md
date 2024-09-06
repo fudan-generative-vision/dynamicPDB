@@ -110,3 +110,94 @@ Finally, the dataset should be organized as follows:
 ```
 
 ## Applications
+### Trajectory Prediction
+We extend the SE(3) diffusion model to incorporate sequence features and physical properties for the task of trajectory prediction.  
+Specifically, given an initial 3D structure of the protein, the task is to predict 3D structure at the next time step. 
+
+#### Showcase
+We present the predicted 3D structures by our method and SE(3)-Trans.  
+<table class="center">
+  <tr>
+    <td style="text-align: center"><b>SE(3) Trans</b></td>
+    <td style="text-align: center"><b>Ours</b></td>
+    <td style="text-align: center"><b>Ground Truth</b></td>
+  </tr>
+  <tr>
+    <td style="text-align: center"><img src="assets/qual/SE3-2ERL-1.png" style="width: 80%;"></a></td>
+    <td style="text-align: center"><img src="assets/qual/OURS-2ERL-1.png" style="width: 80%;"></a></td>
+    <td style="text-align: center"><img src="assets/qual/GT-2ERL-1.png" style="width: 80%;"></a></td>
+  </tr>
+  <tr>
+    <td style="text-align: center"><img src="assets/qual/SE3-3TVJ-9.png" style="width: 80%;"></a></td>
+    <td style="text-align: center"><img src="assets/qual/OURS-3TVJ-9.png" style="width: 80%;"></a></td>
+    <td style="text-align: center"><img src="assets/qual/GT-3TVJ-9.png" style="width: 80%;"></a></td>
+  </tr>
+</table> 
+
+
+#### Framework
+We present the network architecture, where the predicted 3D structures are conditioned on the amino acid sequence and physical properties.  
+<table>
+  <tr>
+    <td align="center">
+      <img src="assets/network.png" style="width: 60%;">
+    </td>
+  </tr>
+</table>
+
+
+#### Installation
+```bash
+  pip install -r requirements.txt
+  pip install .
+```
+#### Data Preparation
+```text
+./DATA/
+|-- 16pk_A
+|   |-- 16pk_A.pdb
+|   |-- 16pk_A.npz
+|   |-- 16pk_A_new_w_pp.npz
+|   |-- 16pk_A_F_Ca.pkl
+|   `-- 16pk_A_V_ca.pkl
+|-- 1b2s_F
+|   |-- ...
+|   `-- ...
+`-- ...
+```
+For each protein xxxx_x,      
+the xxxx_x.pdb is the pdb file for protein;  
+the xxxx_x.npz is the node features and edge features from OmegaFold; produced by ./data_preprocess/extract_embedding.py  
+the xxxx_x_new_w_pp.npz is the trajectory of the protein; produced by first ./data_preprocess/post_process.py and then ./data_preprocess/post_process.py;prep_atlas_with_forces.py;  
+the xxxx_x_F_Ca.pkl is the force of C alpha atoms of the protein; produced by ./data_preprocess/atom_select.py;    
+the xxxx_x_V_ca.pkl is the velocity of C alpha atoms of the protein; produced by ./data_preprocess/atom_select.py;  
+
+Prepare a list of proteins for training in train_proteins.csv as below:
+|name|seqres|release_date|msa_id|atlas_npz|embed_path|seq_len|force_path|vel_path|pdb_path|
+|----|----|----|----|----|----|----|----|----|----|
+|16pk_A|EKKSIN...|1998/11/25|16pk_A|./DATA/16pk_A/16pk_A_new_w_pp.npz|./DATA/16pk_A/16pk_A.npz|415|./DATA/16pk_A/16pk_F_Ca.pkl|./DATA/16pk_A/16pk_V_ca.pkl|./DATA/16pk_A/16pk.pdb|
+|...|
+
+Similarly, prepare for the test_proteins.csv
+
+#### Training
+```shell
+sh run_train.sh
+```
+Key arguments in run_train.sh:  
+data.keep_first: we use frames in [0, data.keepfirst) in each trajectory for training  
+csv_path: the path for train_proteins.csv
+
+#### Inference
+```shell
+sh run_eval.sh
+```
+Key arguments in run_eval.sh:  
+model_path: path of pretrained models  
+start_idx: the time index in the trajectory for evaluation   
+data.test_csv_path: path for test_proteins.csv  
+
+#### Acknowledgements
+We would like to thank the contributors to the [OpenFold](https://github.com/aqlaboratory/openfold), [OmegaFold](https://github.com/HeliXonProtein/OmegaFold).  
+If we missed any open-source projects or related articles, we would like to complement the acknowledgement of this specific work immediately.
+
