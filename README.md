@@ -109,7 +109,6 @@ Finally, the dataset should be organized as follows:
 `-- ...
 ```
 
-
 ## Applications
 ### Trajectory Prediction
 We extend the SE(3) diffusion model to incorporate sequence features and physical properties for the task of trajectory prediction.  
