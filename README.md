@@ -64,50 +64,80 @@ In addition, the following data are stored during the MD simulation:
 | `{protein_id}_T.dcd` | DCD format for trajectory coordinates |
 | `{protein_id}_state_npt1000000.0.xml` | Status file for MD prolongation |
 
-## Download dataset
+## Data Availability Notice
+
+Thank you for your interest and support in our dataset. Due to the immense size of the full simulation data and storage limitations, we have decided to provide the 100ns simulation data for all proteins for online download, with detailed usage instructions in the [README](#-download-dataset). For researchers who require the 1µs simulation data for specific proteins, you may submit a request. We will provide the data individually.
+
+## Download Dataset
 
 You can easily get dynamic PDB dataset from our [ModelScope repo](https://www.modelscope.cn/datasets/fudan-generative-vision/dynamicPDB/).
 
-Clone the dataset into `${DATA_ROOT}/dynamicPDB` directory by cmd below:
+1. Make sure you have Git LFS installed:
 ```shell
+sudo apt-get install git-lfs
+# Initialize Git LFS
 git lfs install
-git clone git clone https://www.modelscope.cn/datasets/fudan-generative-vision/dynamicPDB.git dynamicPDB
+```
+
+2. Navigate to your `DATA_ROOT` and clone the source:
+
+```shell
+GIT_LFS_SKIP_SMUDGE=1 git clone https://www.modelscope.cn/datasets/fudan-generative-vision/dynamicPDB.git dynamicPDB_raw
+```
+`GIT_LFS_SKIP_SMUDGE=1` configures Git to clone the pointers for all LFS files.
+
+3. Download data with a specific `protein_id`, for example `1a62_A`:
+
+```shell
+cd dynamicPDB_raw
+git lfs pull --include="{protein_id}/*"
+```
+
+4. Merge the split-volume compression into one file and then unzip the `.tar.gz` file:
+
+```shell
+cat {protein_id}/{protein_id}.tar.gz.part* > {protein_id}/{protein_id}.tar.gz
+cd ${Your Storage Root}
+mkdir dynamicPDB  # ignore if directory exists
+tar -xvzf dynamicPDB_raw/{protein_id}/{protein_id}.tar.gz -C dynamicPDB
 ```
 
 Finally, the dataset should be organized as follows:
 
 ```text
 ./dynamicPDB/
-|-- 1ab1_A_npt1000000.0_ts0.001
-|   |-- 1ab1_A_npt_sim_data
-|   |   |-- 1ab1_A_npt_sim_0.dat
+|-- 1a62_A_npt100000.0_ts0.001
+|   |-- 1a62_A_npt_sim_data
+|   |   |-- 1a62_A_npt_sim_0.dat
 |   |   `-- ...
-|   |-- 1ab1_A_dcd
-|   |   |-- 1ab1_A_dcd_0.dcd
+|   |-- 1a62_A_dcd
+|   |   |-- 1a62_A_dcd_0.dcd
 |   |   `-- ...
-|   |-- 1ab1_A_T
-|   |   |-- 1ab1_A_T_0.pkl
+|   |-- 1a62_A_T
+|   |   |-- 1a62_A_T_0.pkl
 |   |   `-- ...
-|   |-- 1ab1_A_F
-|   |   |-- 1ab1_A_F_0.pkl
+|   |-- 1a62_A_F
+|   |   |-- 1a62_A_F_0.pkl
 |   |   `-- ...
-|   |-- 1ab1_A_V
-|   |   |-- 1ab1_A_V_0.pkl
+|   |-- 1a62_A_V
+|   |   |-- 1a62_A_V_0.pkl
 |   |   `-- ...
-|   |-- 1ab1_A.pdb
-|   |-- 1ab1_A_minimized.pdb
-|   |-- 1ab1_A_nvt_equi.dat
-|   |-- 1ab1_A_npt_equi.dat
-|   |-- 1ab1_A_T.dcd
-|   |-- 1ab1_A_T.pkl
-|   |-- 1ab1_A_F.pkl
-|   |-- 1ab1_A_V.pkl
-|   `-- 1ab1_A_state_npt1000000.0.xml
-|-- 1uoy_A_npt1000000.0_ts0.001
+|   |-- 1a62_A.pdb
+|   |-- 1a62_A_minimized.pdb
+|   |-- 1a62_A_nvt_equi.dat
+|   |-- 1a62_A_npt_equi.dat
+|   |-- 1a62_A_T.dcd
+|   |-- 1a62_A_T.pkl
+|   |-- 1a62_A_F.pkl
+|   |-- 1a62_A_V.pkl
+|   `-- 1a62_A_state_npt100000.0.xml
+|-- 1ah7_A_npt100000.0_ts0.001
 |   |-- ...
 |   `-- ...
 `-- ...
 ```
+
+For ease of use, we have also provided segmented versions of the data (directories `{protein_id}_dcd`, `{protein_id}_T`, `{protein_id}_F`, and `{protein_id}_V`), each representing one-tenth of the total simulation duration, sequentially named from 0 to 9 in chronological order. The files `{protein_id}_T.dcd`, `{protein_id}_T.pkl`, `{protein_id}_F.pkl`, `{protein_id}_V.pkl` are their corresponding combination.
 
 ## Applications
 ### Trajectory Prediction
