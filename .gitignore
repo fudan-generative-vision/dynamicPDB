@@ -168,6 +168,11 @@ cython_debug/
 pretrained_models
 test_data
 .venv*
-DFOLDv2_res*
-physics_res*
 examples
+*.npz
+*.xtc
+*.tpr
+*.lock
+*.pth
+*_res
+*.pt
