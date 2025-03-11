@@ -1,56 +1,28 @@
 
 import os
 import sys
+
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(project_root)
-import torch
-import GPUtil
-import time
-import tree
-import numpy as np
 # import wandb
-import copy
-import hydra
 import logging
-import copy
 import random
-import pandas as pd
-import subprocess
-from collections import defaultdict
-from collections import deque
+import time
 from datetime import datetime
-from omegaconf import DictConfig
-from omegaconf import OmegaConf
-from torch.nn import DataParallel as DP
-from torch.nn.parallel import DistributedDataParallel as DDP
-import torch.distributed as dist
-from torch.utils import data
-from openfold.utils import rigid_utils as ru
-from hydra.core.hydra_config import HydraConfig
+from typing import Dict
 
-from src.analysis import utils as au
+import GPUtil
+import hydra
+import numpy as np
+import torch
+import train_DFOLD_dynamics
+from omegaconf import DictConfig, OmegaConf
+from torch.utils import data
 # from src.analysis import metrics
 # from data import Dfold_data_loader_new
 from src.data import Dfold_data_loader_dynamic
-from src.data import se3_diffuser
 from src.data import utils as du
-from src.data import all_atom
-from src.model import Dfold_network_dynamic
-from src.experiments import utils as eu
-from openfold.utils.loss import lddt, lddt_ca,torsion_angle_loss,supervised_chi_loss
-from openfold.np import residue_constants#
-from openfold.utils.superimposition import superimpose
-from openfold.utils.validation_metrics import (
-    gdt_ts,
-    gdt_ha,
-    drmsd
-)
-from openfold.utils.lr_schedulers import AlphaFoldLRScheduler
-from Bio.SVDSuperimposer import SVDSuperimposer
-# from openfold.utils.loss import compute_fape
-# from openfold.utils.rigid_utils import Rotation, Rigid
-from typing import Dict
-import train_DFOLD_dynamics
+
 seed = 42
 torch.manual_seed(seed)
 if torch.cuda.is_available():

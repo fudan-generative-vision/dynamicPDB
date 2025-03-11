@@ -9,12 +9,8 @@ from typing import Optional, Callable, List, Sequence
 from openfold.utils.rigid_utils import Rigid
 from openfold.model.structure_module import AngleResnet
 from src.data import all_atom
-# from omegafold import config,pipeline
-# from model.omega_struceture import StructureModule
 import torch.nn.functional as F
 import sys
-# from ckh_tool.gpu_mem_track import MemTracker
-
 
 def permute_final_dims(tensor: torch.Tensor, inds: List[int]):
     zero_index = -1 * len(inds)
@@ -601,37 +597,6 @@ class BackboneUpdate(nn.Module):
 
         return update
 
-class TimeBlock(nn.Module):
-    def __init__(self, node_dim, time_embed_dim, hidden_dim=None):
-        super(TimeBlock,self).__init__()
-        self.node_dim = node_dim
-        self.time_embed_dim = time_embed_dim
-        if hidden_dim is not  None:
-            self.hidden_dim = hidden_dim
-        else:
-            self.hidden_dim = self.node_dim//2
-        self.time_proj = nn.Sequential(
-                nn.Linear(self.time_embed_dim, 4*self.time_embed_dim),
-                nn.SiLU(),
-                nn.Linear(4*self.time_embed_dim, self.hidden_dim),
-            )
-        self.node_proj = nn.Sequential(
-            nn.LayerNorm(self.node_dim),
-            nn.SiLU(),
-            nn.Linear(self.node_dim, self.hidden_dim),
-        )
-        self.out_prj = nn.Sequential(
-            nn.LayerNorm(self.hidden_dim),
-            nn.SiLU(),
-            nn.Linear(self.hidden_dim, self.node_dim),
-        )
-    def forward(self,node_feature,time_embeddings):
-        time_feat = self.time_proj(time_embeddings)
-        hidden_node_feat = self.node_proj(node_feature)
-        node_feat = self.out_prj(time_feat+hidden_node_feat)
-        out = node_feature+node_feat
-        return out
-
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.0, max_len=40):
@@ -642,14 +607,6 @@ class PositionalEncoding(nn.Module):
             torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model)
         )
         pe = torch.zeros(1, max_len, d_model)
-        # print(pe.shape,#torch.Size([1, 40, 33])
-        #       pe[0, :, 0::2].shape,#torch.Size([40, 17])
-        #       pe[0, :, 1::2].shape,#torch.Size([40, 16])
-        #       position.shape,# torch.Size([40, 1])
-        #       div_term.shape#torch.Size([17]
-        #       )
-        # len_sin = pe[0, :, 0::2].shape[-1]
-        # len_cos = pe[0, :, 1::2].shape[-1]
 
         pe[0, :, 0::2] = torch.sin(position * div_term)#[:len_sin]
         pe[0, :, 1::2] = torch.cos(position * div_term)#[:len_cos]
@@ -758,7 +715,6 @@ class DFOLDIpaScore(nn.Module):
             nn.Linear(3, model_conf.node_embed_size),
             nn.SiLU(),
             nn.Linear(model_conf.node_embed_size,model_conf.node_embed_size),
-            #nn.LayerNorm((9, 40, model_conf.node_embed_size)),
             MyLayerNorm(),
             nn.SiLU()
         )
@@ -766,7 +722,6 @@ class DFOLDIpaScore(nn.Module):
             nn.Linear(3, model_conf.node_embed_size),
             nn.SiLU(),
             nn.Linear(model_conf.node_embed_size,model_conf.node_embed_size),
-            #nn.LayerNorm((9, 40, model_conf.node_embed_size)),
             MyLayerNorm(),
             nn.SiLU()
         )
@@ -774,7 +729,6 @@ class DFOLDIpaScore(nn.Module):
             nn.Linear(1, model_conf.node_embed_size),
             nn.SiLU(),
             nn.Linear(model_conf.node_embed_size,model_conf.node_embed_size),
-            #nn.LayerNorm((1, 40, model_conf.node_embed_size)),
             MyLayerNorm(),
             nn.SiLU()
         )
@@ -782,7 +736,6 @@ class DFOLDIpaScore(nn.Module):
             nn.Linear(7, model_conf.node_embed_size),
             nn.SiLU(),
             nn.Linear(model_conf.node_embed_size,model_conf.node_embed_size),
-            #nn.LayerNorm((9, 40, model_conf.node_embed_size)),
             MyLayerNorm(),
             nn.SiLU()
         )
@@ -847,11 +800,6 @@ class DFOLDIpaScore(nn.Module):
         for b in range(self._ipa_conf.num_blocks):
 
             spatial_curr_rigids = curr_rigids.clone()
-
-            #spatial_curr_rigids_norm = spatial_curr_rigids - spatial_curr_rigids[0:1]
-            #rigids_embed_norm = self.rigid_embeder_norm(spatial_curr_rigids_norm)
-            #node_feat_norm = torch.cat([rigids_embed_norm, node_embed, force_embed, vel_embed], dim=-1)
-            #node_feat_norm = self.trunk[f'temp_0'](node_feat_norm)
 
             rigids_embed = self.rigid_embeder(spatial_curr_rigids)
             all_ipa_embed = self.trunk[f'ipa_{b}'](node_embed, edge_embed, Rigid.from_tensor_7(spatial_curr_rigids), node_mask)

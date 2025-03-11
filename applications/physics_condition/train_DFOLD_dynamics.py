@@ -15,61 +15,56 @@ To modify config options with the command line,
 """
 import os
 import sys
+
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(project_root)
-import torch
-import GPUtil
-import time
-import tree
-import numpy as np
 # import wandb
 import copy
-import hydra
+import gc
 import logging
-import copy
+import pickle
 import random
-import pandas as pd
-from collections import defaultdict,deque
+import time
+from collections import defaultdict, deque
 from datetime import datetime
-from omegaconf import DictConfig,OmegaConf
+
+import GPUtil
+import hydra
+import matplotlib.pyplot as plt
+import MDAnalysis as mda
+import numpy as np
+import pandas as pd
+import torch
+import torch.distributed as dist
+import tree
+from Bio.SVDSuperimposer import SVDSuperimposer
+from hydra.core.hydra_config import HydraConfig
+from MDAnalysis.analysis import align,  rms
+from omegaconf import DictConfig, OmegaConf
+from scipy.stats import pearsonr
 from torch.nn import DataParallel as DP
 from torch.nn.parallel import DistributedDataParallel as DDP
-import torch.distributed as dist
 from torch.utils import data
 from torch.utils.tensorboard import SummaryWriter
-
-from Bio.SVDSuperimposer import SVDSuperimposer
-import gc
-import matplotlib.pyplot as plt
-from hydra.core.hydra_config import HydraConfig
-
-
-# from src.analysis import utils as au
-# from src.analysis import metrics
-
-from src.data import Dfold_data_loader_dynamic,se3_diffuser,all_atom
-from src.data import utils as du
-
-from src.model import Dfold_network_dynamic
-from src.experiments import utils as eu
-from openfold.utils.loss import lddt, lddt_ca,torsion_angle_loss
-from openfold.np import residue_constants#
-from openfold.utils.superimposition import superimpose
-from openfold.utils.validation_metrics import gdt_ts,gdt_ha,drmsd
-from openfold.utils.lr_schedulers import AlphaFoldLRScheduler
-from openfold.utils import rigid_utils as ru
-from src.toolbox.rot_trans_error import average_quaternion_distances,average_translation_distances
-
-import MDAnalysis as mda
-from MDAnalysis.analysis import rms,align,rdf,contacts
-from scipy.stats import pearsonr
-import pickle
 from tqdm import tqdm
-import mdtraj as md
+
+from openfold.np import residue_constants
+from openfold.utils import rigid_utils as ru
+from openfold.utils.loss import torsion_angle_loss
+from openfold.utils.superimposition import superimpose
+from openfold.utils.validation_metrics import drmsd
+from src.data import Dfold_data_loader_dynamic, all_atom, se3_diffuser
+from src.data import utils as du
+from src.experiments import utils as eu
+from src.model import Dfold_network_dynamic
+from src.toolbox.rot_trans_error import (average_quaternion_distances,
+                                         average_translation_distances)
+
 
 def format_func(value, tick_number):
     return f'{value:.1f}'
 from matplotlib.ticker import FuncFormatter
+
 formatter = FuncFormatter(format_func)
 
 
@@ -137,12 +132,7 @@ def compute_validation_metrics_all(gt_pos, out_pos,gt_mask,superimposition_metri
     pred_coords_masked = pred_coords_masked.reshape([frame_time,-1,3]) 
 
     diff = gt_coords_masked - pred_coords_masked # [F,N*37,3]
-    # print(diff.shape,all_atom_mask.shape,all_atom_mask_ca.shape)
-    # print(diff[1,:10,0],all_atom_mask.reshape([4,-1])[1,:10])
-    # torch.Size([4, 2516(68*37), 3]) torch.Size([4, 68, 37]) torch.Size([4, 68])
-    #xit()
-    # diff torch.Size([4, 37N, 3])
-    #all_atom_mask [F,N,37]
+
     metrics["rmsd_all"]  = torch.sqrt(torch.sum(diff**2,axis=(-1,-2))/(torch.sum(all_atom_mask, dim=(-1, -2)) + 1e-4))
     diff = gt_coords_masked_ca - pred_coords_masked_ca # [F,N,3]
     #all_atom_mask_ca [F,N]
@@ -192,122 +182,6 @@ def plot_curve_merged(metric_merged,save_path,row_num=2,col_num=5,suffer_fix=Non
         plt.savefig(f'{save_path}/rmse_rmsd_{suffer_fix}.png')
     else:
         plt.savefig(f'{save_path}/rmse_rmsd.png')
-    return fig
-
-
-# rot_trans_error_dict = {'name':[],"ave_rot":[],"ave_trans":[],"first_rot":[],"first_trans":[]}
-@torch.no_grad()
-def plot_rot_trans_curve(error_dict,save_path,frame_step=1):
-    rows,cols = 2,len(error_dict['name'])
-    fig, axes = plt.subplots(rows, cols, figsize=(cols*2,rows*2),dpi=300)
-    # /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/protein/workspace/chengkaihui/code/DFOLDv2/plot/4ue8_B_simulation_1_frame_step_1_wj.pickle
-    motion_pkl_path = f'/cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/protein/workspace/chengkaihui/code/DFOLDv2/plot/4ue8_B_simulation_1_frame_step_{frame_step}_wj.pickle'# 1a62_A_ 4ue8_B
-
-    # motion_pkl_path = f'/cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/protein/workspace/chengkaihui/code/DFOLDv2/plot/4ue8_b_38_{frame_step}_atlas.pickle'
-    try:# atlas_average_motion_traj1
-        with open(motion_pkl_path, 'rb') as handle:
-            loaded_data = pickle.load(handle)
-    except (EOFError, FileNotFoundError, pickle.UnpicklingError) as e:
-        # 在这里捕获可能的异常并跳过处理
-        loaded_data=None
-    print(f'======>  motion step {frame_step}:',loaded_data)
-    print('======>  error dict:',error_dict)
-    for idx,name in enumerate(error_dict['name']):
-        if cols==1:
-            axes[0].plot(error_dict['ave_rot'][idx],label='Pred', marker='o', linestyle='-')
-            axes[0].plot(error_dict['first_rot'][idx],label='RefAsPred', marker='o', linestyle='-')
-            # x = np.arange(1, len(error_dict['first_rot'][idx]))
-            # axes[0].plot(x,error_dict['time_rot_dif'][idx][1:],label='RM', marker='o', linestyle='-')
-
-            axes[1].plot(error_dict['ave_trans'][idx],label='Pred', marker='o', linestyle='-')
-            axes[1].plot(error_dict['first_trans'][idx],label='RefAsPred', marker='o', linestyle='-')
-            # axes[1].plot(x,error_dict['time_trans_dif'][idx][1:],label='RM', marker='o', linestyle='-')
-
-            # plot percent compare with traj motion
-            if loaded_data is not None:
-                rots_traj_motion = loaded_data[name]['ARC_rot']
-                rots_traj_motion = np.array([rots_traj_motion]* len(error_dict['ave_rot'][idx]))
-                axes[0].plot(rots_traj_motion,label='TrajMotion', marker='o', linestyle='-')
-
-                percent_rots = error_dict['ave_rot'][idx]/rots_traj_motion
-
-                x  = np.arange(0, len(percent_rots))
-                for i in range(len(x)):
-                    axes[0].annotate(f'{percent_rots[i]:.2f}',
-                                xy=(x[i], error_dict['ave_rot'][idx][i]),
-                                xytext=(2, 0),  # points vertical offset
-                                textcoords="offset points",
-                                ha='left', va='center',fontsize=8)
-
-
-                trans_traj_motion = loaded_data[name]['ARC_trans_MSE']
-                trans_traj_motion = np.array([trans_traj_motion]* len(error_dict['ave_trans'][idx]))
-                axes[1].plot(trans_traj_motion,label='TrajMotion', marker='o', linestyle='-')
-
-                percent_trans = error_dict['ave_trans'][idx]/trans_traj_motion
-
-                x  = np.arange(0, len(percent_trans))
-                for i in range(len(x)):
-                    axes[1].annotate(f'{percent_trans[i]:.2f}',
-                                xy=(x[i], error_dict['ave_trans'][idx][i]),
-                                xytext=(2, 0),  # points vertical offset
-                                textcoords="offset points",
-                                ha='left', va='center',fontsize=8)
-
-
-            axes[0].set_title(name)
-
-            axes[1].yaxis.set_major_formatter(formatter)
-            axes[0].set_ylabel('Rotation/°')
-            axes[1].set_ylabel('Translation/Å')
-        else:
-            axes[0,idx].plot(error_dict['ave_rot'][idx],label='Pred', marker='o', linestyle='-')
-            axes[0,idx].plot(error_dict['first_rot'][idx],label='RefAsPred', marker='o', linestyle='-')
-            # x = np.arange(1, len(error_dict['first_rot'][idx]))
-            # axes[0,idx].plot(x,error_dict['time_rot_dif'][idx][1:],label='RM', marker='o', linestyle='-')
-
-
-            axes[1,idx].plot(error_dict['ave_trans'][idx],label='Pred', marker='o', linestyle='-')
-            axes[1,idx].plot(error_dict['first_trans'][idx],label='RefAsPred', marker='o', linestyle='-')
-            # axes[1,idx].plot(x,error_dict['time_trans_dif'][idx][1:],label='RM', marker='o', linestyle='-')
-
-            if loaded_data is not None:
-                rots_traj_motion = loaded_data[name]['ARC_rot']
-                rots_traj_motion = np.array([rots_traj_motion]* len(error_dict['ave_rot'][idx]))
-                axes[0,idx].plot(rots_traj_motion,label='TrajMotion', marker='o', linestyle='-')
-
-                percent_rots = error_dict['ave_rot'][idx]/rots_traj_motion
-                x  = np.arange(0, len(percent_rots))
-                for i in range(len(x)):
-                    axes[0,idx].annotate(f'{percent_rots[i]:.2f}',
-                                xy=(x[i], error_dict['ave_rot'][idx][i]),
-                                xytext=(2, 0),  # points vertical offset
-                                textcoords="offset points",
-                                ha='left', va='center',fontsize=8)
-
-
-                trans_traj_motion = loaded_data[name]['ARC_trans_MSE']
-                trans_traj_motion = np.array([trans_traj_motion]* len(error_dict['ave_trans'][idx]))
-                axes[1,idx].plot(trans_traj_motion,label='TrajMotion', marker='o', linestyle='-')
-
-                percent_trans = error_dict['ave_trans'][idx]/trans_traj_motion
-                x  = np.arange(0, len(percent_trans))
-                for i in range(len(x)):
-                    axes[1,idx].annotate(f'{percent_trans[i]:.2f}',
-                                xy=(x[i], error_dict['ave_trans'][idx][i]),
-                                xytext=(2, 0),  # points vertical offset
-                                textcoords="offset points",
-                                ha='left', va='center',fontsize=8)
-
-            axes[0, idx].set_title(name)
-
-            axes[1,idx].yaxis.set_major_formatter(formatter)
-            if idx==0:
-                axes[0,idx].set_ylabel('Rotation/°')
-                axes[1,idx].set_ylabel('Translation/Å')
-    plt.tight_layout()
-    plt.legend()
-    plt.savefig(f'{save_path}/rot_trans_error.png')
     return fig
 
 @torch.no_grad()
@@ -407,7 +281,6 @@ class Experiment:
                 if 'temporal' in name: # 'frame'
                     param.requires_grad = True
 
-        # 冻结/解冻后计算总参数数量（应与初始值相同）
         trainable_num_parameters = sum(p.numel() for p in self._model.parameters() if p.requires_grad)
         self._exp_conf.num_parameters = num_parameters
         self._exp_conf.trainable_num_parameters  = num_parameters
@@ -1013,8 +886,7 @@ class Experiment:
                 is_training=False,
                 is_testing=True,
                 is_random_test=False,
-                data_npz='/cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/datasets/atlas/processed_npz/4ue8_B.npz'
-                # data_npz='/cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/protein/workspace/chengkaihui/datasets/simulation_data/processed_npz/4ue8_B_40ps/4ue8_B.npz'
+                data_npz='test/processed_npz/4ue8_B.npz'
         )
         num_workers = num_workers
         persistent_workers = True if num_workers > 0 else False
@@ -1122,7 +994,6 @@ class Experiment:
                             for key, values in rot_trans_error_dict.items() if key != 'name'}
             rot_trans_error_mean = {key: sum(values) / len(values) for key, values in rot_trans_error_mean.items() if key != 'name'}
 
-            # error_fig = plot_rot_trans_curve(rot_trans_error_dict,save_path=eval_dir,frame_step=self._data_conf.frame_sample_step)
 
             # un-aligned prediciton metric 
             ckpt_eval_metrics = pd.DataFrame(metric_list)
@@ -1313,14 +1184,12 @@ class Experiment:
         rot_loss *= int(self._diff_conf.diffuse_rot)
 
         rot_loss = rot_loss[-1:].repeat(batch_size)
-        #print(rot_loss.shape)
-        #exit()
         
         # Backbone atom loss
         pred_atom37 = model_out['atom37'][:, :, :5]
         gt_rigids = ru.Rigid.from_tensor_7(batch['rigids_0'].type(torch.float32))
         gt_psi = batch['torsion_angles_sin_cos'][..., 2, :]  # psi
-        gt_atom37, atom37_mask, _, _ = all_atom.compute_backbone(gt_rigids, gt_psi) # 这里只考虑psi角度，因为只有五个atom
+        gt_atom37, atom37_mask, _, _ = all_atom.compute_backbone(gt_rigids, gt_psi) # Only the psi angle is considered here, as there are only five atoms
         gt_atom37 = gt_atom37[:, :, :5]
         atom37_mask = atom37_mask[:, :, :5]
 
@@ -1333,7 +1202,7 @@ class Experiment:
         ) / (bb_atom_loss_mask.sum(dim=(-1, -2)) + 1e-10)
         bb_atom_loss *= self._exp_conf.bb_atom_loss_weight
         # TODO here delete the filter
-        bb_atom_loss *= batch['t'] < self._exp_conf.bb_atom_loss_t_filter  # here 小于这个阈值才有atom，为什么
+        bb_atom_loss *= batch['t'] < self._exp_conf.bb_atom_loss_t_filter 
         
 
         bb_atom_loss *= self._exp_conf.aux_loss_weight
@@ -1380,21 +1249,11 @@ class Experiment:
             'batch_train_loss': final_loss.detach(),
             'batch_rot_loss': rot_loss.detach(),
             'batch_trans_loss': trans_loss.detach(),
-            #'batch_bb_atom_loss': bb_atom_loss.detach(),
-            #'batch_dist_mat_loss': dist_mat_loss.detach(),
             'batch_torsion_loss':torsion_loss.detach(),
             'total_loss': normalize_loss(final_loss).detach(),
             'rot_loss': normalize_loss(rot_loss).detach(),
-            #'ref_rot_loss':normalize_loss(ref_rot_loss).detach(),
             'trans_loss': normalize_loss(trans_loss).detach(),
-            #'ref_trans_loss':normalize_loss(ref_trans_loss).detach(),
-            #'bb_atom_loss': normalize_loss(bb_atom_loss).detach(),
-            #'dist_mat_loss': normalize_loss(dist_mat_loss).detach(),
             'torsion_loss':normalize_loss(torsion_loss).detach(),
-            # 'examples_per_step': torch.tensor(batch_size-1).detach(),
-            # 'res_length': torch.mean(torch.sum(bb_mask, dim=-1)).detach(),
-            #'update_rots':torch.mean(torch.abs(model_out['rigid_update'][...,:3]),dim=(0,1)).detach(),
-            #'update_trans':torch.mean(torch.abs(model_out['rigid_update'][...,-3:]),dim=(0,1)).detach(),
         }
 
         assert final_loss.shape == (batch_size,)
@@ -1458,13 +1317,6 @@ class Experiment:
         all_bb_prots = []
         all_trans_0_pred = []
         all_bb_0_pred = []
-        # b,n,_ = sample_feats['rigids_t'].shape
-        # atom37_t = all_atom.compute_backbone_atom37(
-        #                 bb_rigids=ru.Rigid.from_tensor_7(sample_feats['rigids_t']),
-        #                 aatypes=sample_feats['aatype'],
-        #                 torsions = torch.rand(b, n, 7, 2)
-        #             )[0]
-        # all_bb_prots.append(du.move_to_np(atom37_t))
         with torch.no_grad():
             if self._model_conf.embed.embed_self_conditioning and self_condition:
                 sample_feats = self._set_t_feats(sample_feats, reverse_steps[0], t_placeholder)
@@ -1481,10 +1333,7 @@ class Experiment:
                         model_out_unref = self.model(sample_feats,drop_ref = True)
                         trans_score_unref = model_out_unref['trans_score']
                         cfg_gamma = self._conf.model.cfg_gamma
-                        # rot_score_unref = model_out_unref['rot_score']
                         trans_score = trans_score_unref + cfg_gamma*(trans_score-trans_score_unref)
-                        #(1-cfg_gamma)*trans_score+cfg_gamma*trans_score_unref is wrong
-                        # rot_score = (1-self._model_conf.cfg_drop_rate)*rot_score+self._model_conf.cfg_drop_rate*rot_score_unref
 
                     if self._model_conf.embed.embed_self_conditioning:
                         sample_feats['sc_ca_t'] = rigid_pred[..., 4:]

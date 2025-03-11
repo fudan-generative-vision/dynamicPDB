@@ -13,31 +13,13 @@ data:
   split_percent: 0.7          # Percentage of data used for extrapolation.
   keep_first: null            # Keep the first N time sequences.
   dynamics: True
-  # csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/processing_atlas/test_merged_all.csv # train data path
-  # val_csv_path:  /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/processing_atlas/test_merged_all.csv # val data path
-  # # csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_b_38.csv
-  # val_csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_b_38.csv
-  # /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/test_merged_1.csv
-  # cluster_path:  /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/clusters-by-entity-30.txt
-  #csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_B_simulation_1_wj.csv # train data path
-  #val_csv_path:  /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_B_simulation_1_wj.csv # val data path
-  csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/liuce/data_10w/out.csv
-  val_csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/liuce/data_10w/out.csv
+  csv_path: ./examples/merged.csv
+  val_csv_path: ./examples/merged.csv
   frame_time: 1  # the lenght of time sequence
   frame_sample_step: 1 # random  select start index first and  split data with steps
   filtering:
     max_len: 256
-  #   min_len: 60
-  #   # Selects a subset of examples. Useful for debugging.
-  #   subset: null
-  #   allowed_oligomer: [monomeric]
-  #   max_helix_percent: 1.0
-  #   max_loop_percent: 0.5
-  #   min_beta_percent: -1.0
-  #   rog_quantile: 0.96
   min_t: 0.01
-  # samples_per_eval_length: 4
-  # num_eval_lengths: 10
   num_t: 10 # linespace for reverse diffuser for 0 to 1
 
 diffuser:
@@ -105,8 +87,8 @@ model:
 
 experiment:
   # Experiment metadata
-  name: DFOLDv2_Temporal_${model.ipa.temporal}
-  base_root: ../DFOLDv2_res/result_v2_deep_debug
+  name: physics_condition
+  base_root: ../DFOLDv2_res/physics_condition
   run_id: null
   training: True
 
