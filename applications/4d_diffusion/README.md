@@ -212,7 +212,7 @@ Before testing or training your cases, please ensure that the working directory 
 
 ### 🎮 Inference
 
-We have provided [some samples](./examples/) for your reference. Simply run the `scripts/run_eval_extrapolation.sh` and `scripts/run_eval_visual.sh` as follows:
+Run the `scripts/run_eval_extrapolation.sh` and `scripts/run_eval_visual.sh` as follows:
 
 1. Generate Trajectory
 
