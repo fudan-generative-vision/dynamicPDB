@@ -1,11 +1,14 @@
 
 import os
+import sys
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(project_root)
 import torch
 import GPUtil
 import time
 import tree
 import numpy as np
-import wandb
+# import wandb
 import copy
 import hydra
 import logging
@@ -26,7 +29,7 @@ from openfold.utils import rigid_utils as ru
 from hydra.core.hydra_config import HydraConfig
 
 from src.analysis import utils as au
-from src.analysis import metrics
+# from src.analysis import metrics
 # from data import Dfold_data_loader_new
 from src.data import Dfold_data_loader_dynamic
 from src.data import se3_diffuser

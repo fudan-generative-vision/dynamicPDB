@@ -14,12 +14,15 @@ To modify config options with the command line,
 
 """
 import os
+import sys
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(project_root)
 import torch
 import GPUtil
 import time
 import tree
 import numpy as np
-import wandb
+# import wandb
 import copy
 import hydra
 import logging
@@ -41,8 +44,8 @@ import matplotlib.pyplot as plt
 from hydra.core.hydra_config import HydraConfig
 
 
-from src.analysis import utils as au
-from src.analysis import metrics
+# from src.analysis import utils as au
+# from src.analysis import metrics
 
 from src.data import Dfold_data_loader_dynamic,se3_diffuser,all_atom
 from src.data import utils as du
