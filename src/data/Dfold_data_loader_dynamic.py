@@ -192,9 +192,9 @@ class PdbDataset(data.Dataset):
     def _process_csv_row(self, processed_file_path, force_file_path, vel_file_path, pdb_file_path):
         # here to sample frame_time continuous positions.
         processed_feats = dict(np.load(processed_file_path,allow_pickle=True,mmap_mode='r'))
-        with open(force_file_path.replace('.pkl', '_Ca.pkl'), 'rb') as f:
+        with open(force_file_path, 'rb') as f:
            force_feats = pickle.load(f)
-        with open(vel_file_path.replace('.pkl', '_ca.pkl'), 'rb') as f:
+        with open(vel_file_path, 'rb') as f:
            vel_feats = pickle.load(f)
 
         #traj = md.load(pdb_file_path)                                                                                                                                                                    
@@ -298,7 +298,7 @@ class PdbDataset(data.Dataset):
             pdb_name = csv_row['name']
         else:
             raise ValueError('Need chain identifier.')
-        processed_file_path = csv_row['atlas_npz']
+        processed_file_path = csv_row['dynamic_npz']
         force_file_path = csv_row['force_path']
         #print(force_file_path)
         vel_file_path = csv_row['vel_path']

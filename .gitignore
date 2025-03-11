@@ -168,3 +168,6 @@ cython_debug/
 data
 pretrained_models
 test_data
+.venv*
+DFOLDv2_res*
+examples
