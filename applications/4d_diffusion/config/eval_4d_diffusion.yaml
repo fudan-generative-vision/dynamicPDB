@@ -1,0 +1,37 @@
+# Default or base configuration for SE(3) diffusion experiments.
+
+defaults:
+  - train_4d_diffusion
+
+data:
+  dynamics: True
+  frame_time: 16 
+  frame_sample_step: 1
+  max_protein_num: 6 # num of proteins for evalutation metric
+  csv_path: ../examples/atlas_visual_se3_filter.csv 
+  test_csv_path:  ../examples/atlas_visual_se3_filter.csv 
+
+eval:
+  name: eval
+  gpu_id: null
+  repeat_time: 1
+  random_sample: False
+  mode: 0 # 0 for single step 1: for extrapolation 2: for batch eval
+  extrapolation_time: 10
+
+  # Path to model weights.
+  weights_path: ./weights/paper_weights.pth
+  output_dir: ${experiment.base_root}/evaluation_outputs/
+  eval_batch_size: 1
+
+experiment:
+    use_ddp: False
+    training: False
+
+model:
+  ipa:
+    temporal: True
+
+hydra:
+  run:
+    dir: ${experiment.base_root}/eval_out_logs/${experiment.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
