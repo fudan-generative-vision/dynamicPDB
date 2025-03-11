@@ -1,7 +1,7 @@
 # Default or base configuration for SE(3) diffusion experiments.
 
 defaults:
-  - train_DFOLDv2
+  - train_physics_condition
 
 data:
   dynamics: True

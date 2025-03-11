@@ -15,12 +15,13 @@ import GPUtil
 import hydra
 import numpy as np
 import torch
-import train_DFOLD_dynamics
 from omegaconf import DictConfig, OmegaConf
 from torch.utils import data
+
+import applications.physics_condition.train_physics_condition as train_physics_condition
 # from src.analysis import metrics
 # from data import Dfold_data_loader_new
-from src.data import Dfold_data_loader_dynamic
+from src.data import physics_condition_loader_dynamic
 from src.data import utils as du
 
 seed = 42
@@ -100,17 +101,14 @@ class Evaluator:
         # Prepare model
         self._conf.experiment.ckpt_dir = None
         self._conf.experiment.warm_start = None
-        self.exp = train_DFOLD_dynamics.Experiment(conf=self._conf)
+        self.exp = train_physics_condition.Experiment(conf=self._conf)
         self.model = self.exp.model
 
         # Remove module prefix if it exists.
         model_weights = weights_pkl['model']
         model_weights = {k.replace('module.', ''):v for k,v in model_weights.items()}
-        # print(self.model.state_dict()['score_model.rigid_embeder.2.weight'])
-        # exit()
         self.model.load_state_dict(model_weights)
-        # print(self.model.state_dict()['score_model.rigid_embeder.2.weight'])
-        # exit()
+
         self.model = self.model.to(self.device)
         self.model.eval()
         self.diffuser = self.exp.diffuser
@@ -119,7 +117,7 @@ class Evaluator:
 
     def create_dataset(self,is_random=False):
         if self._data_conf.is_extrapolation:
-            test_dataset = Dfold_data_loader_dynamic.PdbDatasetExtrapolation(
+            test_dataset = physics_condition_loader_dynamic.PdbDatasetExtrapolation(
             data_conf=self._data_conf,
             diffuser=self.exp._diffuser,
             is_training=False,
@@ -127,7 +125,7 @@ class Evaluator:
             is_random_test=is_random
             )
         else:
-            test_dataset = Dfold_data_loader_dynamic.PdbDataset(
+            test_dataset = physics_condition_loader_dynamic.PdbDataset(
                 data_conf=self._data_conf,
                 diffuser=self.exp._diffuser,
                 is_training=False,
@@ -164,48 +162,27 @@ class Evaluator:
         with open(config_path, 'w') as f:
             OmegaConf.save(config=self._conf, f=f)
         self._log.info(f'Saving inference config to {config_path}')
-        # for valid_feats, pdb_names in test_loader:
-        #     print(pdb_names,valid_feats['atom37_pos'].shape,valid_feats['atom37_pos'][0,:,0,0])
-        #     exit()
-        # for test_feats, pdb_names in test_loader:
-        #     print(pdb_names)
-        # ckpt_eval_metrics,curve_fig,curve_fig_aligned,error_fig,model_ckpt_update,rot_trans_error_mean = self.exp.eval_fn(eval_dir,test_loader,self.device,noise_scale=self._exp_conf.noise_scale,is_training=False)
-        # return ckpt_eval_metrics,curve_fig,curve_fig_aligned,error_fig,model_ckpt_update,rot_trans_error_mean
         # self.exp.eval_extension(eval_dir,test_loader,self.device,noise_scale=self._exp_conf.noise_scale,is_training=False)
-        #self.exp.eval_fn_multi(eval_dir,test_loader,self.device,diffuser=self.exp._diffuser,exp_name=self._weights_path.split('/')[-3],data_conf=self._data_conf,
-        #self.exp.eval_fn(eval_dir,test_loader,self.device,diffuser=self.exp._diffuser,exp_name=self._weights_path.split('/')[-3],data_conf=self._data_conf,
+        # self.exp.eval_fn_multi(eval_dir,test_loader,self.device,diffuser=self.exp._diffuser,exp_name=self._weights_path.split('/')[-3],data_conf=self._data_conf,
+        # self.exp.eval_fn(eval_dir,test_loader,self.device,diffuser=self.exp._diffuser,exp_name=self._weights_path.split('/')[-3],data_conf=self._data_conf,
         #                       num_workers=self._exp_conf.num_loader_workers,eval_batch_size=self._eval_conf.eval_batch_size,
         #                       noise_scale=self._exp_conf.noise_scale,is_training=False)
         self.exp.eval_fn(eval_dir,test_loader,self.device,noise_scale=self._exp_conf.noise_scale,is_training=False)
 
-@hydra.main(version_base=None, config_path="./config", config_name="eval_DFOLDv2")
+@hydra.main(version_base=None, config_path="./config", config_name="eval_physics_condition")
 def run(conf: DictConfig) -> None:
 
     # Read model checkpoint.
     print('Starting inference')
     start_time = time.time()
     sampler = Evaluator(conf)
-    # here to infere multi times
-    # for i in range(2):
-    #     print(f"======>>>>>>>>>{i}")
-    #ckpt_eval_metrics,curve_fig,curve_fig_aligned,error_fig,model_ckpt_update,rot_trans_error_mean = sampler.start_evaluation()
+
     rot_trans_error_mean = sampler.start_evaluation()
     # print(ckpt_eval_metrics,rot_trans_error_mean)
     # print('Rotation:',rot_trans_error_mean['ave_rot'],rot_trans_error_mean['first_rot'])
     # print('Translation:',rot_trans_error_mean['ave_trans'],rot_trans_error_mean['first_trans'])
     # print(rot_trans_error_mean)
-    # 用于存储结果字典的列表
-    # dict_list = []
 
-    # # 遍历 DataFrame 的每一行
-    # for index, row in ckpt_eval_metrics.iterrows():
-    #     # 创建一个字典，将列名作为键，对应的值作为键的值
-    #     row_dict = {col: (val.item() if isinstance(val, np.ndarray) else val) for col, val in row.items()}
-    #     # 添加到结果列表中
-    #     dict_list.append(row_dict)
-    # # 还需要加入trans rots error
-    # print('='*10)
-    # print(dict_list)
     elapsed_time = time.time() - start_time
     print(f'Finished in {elapsed_time:.2f}s')
 

@@ -1,16 +1,19 @@
 """Fork of Openfold's IPA."""
 
+import math
+import sys
+from typing import Callable, List, Optional, Sequence
+
 import numpy as np
 import torch
-import math
-from scipy.stats import truncnorm
 import torch.nn as nn
-from typing import Optional, Callable, List, Sequence
-from openfold.utils.rigid_utils import Rigid
-from openfold.model.structure_module import AngleResnet
-from src.data import all_atom
 import torch.nn.functional as F
-import sys
+from scipy.stats import truncnorm
+
+from openfold.model.structure_module import AngleResnet
+from openfold.utils.rigid_utils import Rigid
+from src.data import all_atom
+
 
 def permute_final_dims(tensor: torch.Tensor, inds: List[int]):
     zero_index = -1 * len(inds)

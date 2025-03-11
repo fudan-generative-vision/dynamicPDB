@@ -5,7 +5,7 @@ val_csv=./examples/merged.csv
 NUM_GPU=1
 CUDA_VISIBLE_DEVICES=0
 
-python -m torch.distributed.launch --nproc_per_node=${NUM_GPU} --master_port 10383 --use_env train_DFOLD_dynamics.py \
+python -m torch.distributed.launch --nproc_per_node=${NUM_GPU} --master_port 10383 --use_env train_physics_condition.py \
 experiment.num_gpus=${NUM_GPU} \
 experiment.batch_size=${NUM_GPU} \
 experiment.noise_scale=1.0 \

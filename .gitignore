@@ -165,9 +165,9 @@ cython_debug/
 # IDE
 .idea/
 .vscode/
-data
 pretrained_models
 test_data
 .venv*
 DFOLDv2_res*
+physics_res*
 examples

@@ -39,7 +39,7 @@ import torch.distributed as dist
 import tree
 from Bio.SVDSuperimposer import SVDSuperimposer
 from hydra.core.hydra_config import HydraConfig
-from MDAnalysis.analysis import align,  rms
+from MDAnalysis.analysis import align, rms
 from omegaconf import DictConfig, OmegaConf
 from scipy.stats import pearsonr
 from torch.nn import DataParallel as DP
@@ -53,10 +53,10 @@ from openfold.utils import rigid_utils as ru
 from openfold.utils.loss import torsion_angle_loss
 from openfold.utils.superimposition import superimpose
 from openfold.utils.validation_metrics import drmsd
-from src.data import Dfold_data_loader_dynamic, all_atom, se3_diffuser
+from src.data import all_atom, physics_condition_loader_dynamic, se3_diffuser
 from src.data import utils as du
 from src.experiments import utils as eu
-from src.model import Dfold_network_dynamic
+from src.model import physics_condition_network_dynamic
 from src.toolbox.rot_trans_error import (average_quaternion_distances,
                                          average_translation_distances)
 
@@ -263,7 +263,7 @@ class Experiment:
 
         # Initialize experiment objects
         self._diffuser = se3_diffuser.SE3Diffuser(self._diff_conf)
-        self._model = Dfold_network_dynamic.FullScoreNetwork(self._model_conf, self.diffuser)
+        self._model = physics_condition_network_dynamic.FullScoreNetwork(self._model_conf, self.diffuser)
 
         if conf.experiment.warm_start:
             ckpt_path = conf.experiment.warm_start
@@ -390,26 +390,26 @@ class Experiment:
     def create_dataset(self):
         
         if self._data_conf.is_extrapolation:
-            train_dataset = Dfold_data_loader_dynamic.PdbDatasetExtrapolation(
+            train_dataset = physics_condition_loader_dynamic.PdbDatasetExtrapolation(
             data_conf=self._data_conf,
             diffuser=self._diffuser,
             is_training=True
             )
 
-            valid_dataset = Dfold_data_loader_dynamic.PdbDatasetExtrapolation(
+            valid_dataset = physics_condition_loader_dynamic.PdbDatasetExtrapolation(
                 data_conf=self._data_conf,
                 diffuser=self._diffuser,
                 is_training=False
             )
         else:
             # Datasets
-            train_dataset = Dfold_data_loader_dynamic.PdbDataset(
+            train_dataset = physics_condition_loader_dynamic.PdbDataset(
                 data_conf=self._data_conf,
                 diffuser=self._diffuser,
                 is_training=True
             )
 
-            valid_dataset = Dfold_data_loader_dynamic.PdbDataset(
+            valid_dataset = physics_condition_loader_dynamic.PdbDataset(
                 data_conf=self._data_conf,
                 diffuser=self._diffuser,
                 is_training=False
@@ -880,7 +880,7 @@ class Experiment:
                        min_t=None, num_t=None, noise_scale=1.0,is_training=True):
         res_dict_list = []
         # print(data_conf)
-        test_dataset = Dfold_data_loader_dynamic.ErgodicPdbDataset(
+        test_dataset = physics_condition_loader_dynamic.ErgodicPdbDataset(
                 data_conf=data_conf,
                 diffuser=diffuser,
                 is_training=False,
@@ -1421,7 +1421,7 @@ class Experiment:
 
 
 
-@hydra.main(version_base=None, config_path="./config", config_name="train_DFOLDv2")
+@hydra.main(version_base=None, config_path="./config", config_name="train_physics_condition")
 def run(conf: DictConfig) -> None:
 
     # Fixes bug in https://github.com/wandb/wandb/issues/1525

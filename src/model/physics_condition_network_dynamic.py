@@ -1,19 +1,20 @@
 """Score network module."""
-import torch
-import math
-from torch import nn
-from torch.nn import functional as F
-from openfold.utils import feats
-from src.data import utils as du
-from src.data import all_atom
-from src.model import ipa_pytorch_dynamic
 import functools as fn
-from openfold.utils.tensor_utils import batched_gather
+import math
 from typing import Tuple
 
 import torch
-from src.model.utils import get_timestep_embedding
+from torch import nn
+from torch.nn import functional as F
+
 from openfold.np import residue_constants as rc
+from openfold.utils import feats
+from openfold.utils.tensor_utils import batched_gather
+from src.data import all_atom
+from src.data import utils as du
+from src.model import physics_condition_pytorch_dynamic
+from src.model.utils import get_timestep_embedding
+
 Tensor = torch.Tensor
 
 class DFOLDv2_Embeder(nn.Module):
@@ -87,7 +88,7 @@ class FullScoreNetwork(nn.Module):
         self._model_conf = model_conf
         self.embedding_layer = DFOLDv2_Embeder(model_conf)
         self.diffuser = diffuser
-        self.score_model = ipa_pytorch_dynamic.DFOLDIpaScore(model_conf, diffuser)
+        self.score_model = physics_condition_pytorch_dynamic.DFOLDIpaScore(model_conf, diffuser)
         self.expand_node = nn.Linear(256, model_conf.node_embed_size)
         self.expand_edge = nn.Linear(128, model_conf.edge_embed_size)
         

@@ -2,7 +2,7 @@
 test_csv=./examples/merged.csv 
 model_path=../DFOLDv2_res/result_v2_selfdata/ckpt/force_full_gen_10_release/11D_03M_2025Y_11h_15m_54s/step_31.pth
 start_idx=1
-python eval_DFOLD_dynamics.py eval.weights_path=$model_path \
+python eval_physics_condition.py eval.weights_path=$model_path \
 experiment.use_ddp=False \
 data.frame_time=2  \
 model.cfg_drop_rate=0.0 \
