@@ -994,13 +994,13 @@ class Experiment:
                             for key, values in rot_trans_error_dict.items() if key != 'name'}
             rot_trans_error_mean = {key: sum(values) / len(values) for key, values in rot_trans_error_mean.items() if key != 'name'}
 
-
+            # use aligned prediciton metric to save the best model
+            mean_dict = ckpt_eval_metrics.mean()
             # un-aligned prediciton metric 
             ckpt_eval_metrics = pd.DataFrame(metric_list)
             ckpt_eval_metrics.insert(0,'pdb_name',save_name_list)
 
-            # use aligned prediciton metric to save the best model
-            mean_dict = ckpt_eval_metrics.mean()
+            
             mean_dict = mean_dict.to_dict()
 
             # if mean_dict['alignment_rmsd'] < self.bset_rmsd_ca:
