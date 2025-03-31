@@ -9,9 +9,12 @@ from typing import Optional, Callable, List, Sequence
 from openfold.utils.rigid_utils import Rigid
 from openfold.model.structure_module import AngleResnet
 from src.data import all_atom
+# from omegafold import config,pipeline
+# from model.omega_struceture import StructureModule
 import torch.nn.functional as F
-import inspect
 import sys
+# from ckh_tool.gpu_mem_track import MemTracker
+
 
 def permute_final_dims(tensor: torch.Tensor, inds: List[int]):
     zero_index = -1 * len(inds)
@@ -307,6 +310,12 @@ class InvariantPointAttention(nn.Module):
         # TODO: Remove after published checkpoint is updated without these weights.
         self.linear_rbf = Linear(20, 1)
 
+        # self.temporal = nn.Sequential(
+        #     nn.Conv1d(self.no_heads, self.no_heads * 8, kernel_size=3, padding=1, stride=1),
+        #     nn.ReLU(True),
+        #     nn.Conv1d(self.no_heads * 8, self.no_heads, kernel_size=3, padding=1, stride=1)
+        # )
+
     def forward(
         self,
         s: torch.Tensor,
@@ -422,6 +431,15 @@ class InvariantPointAttention(nn.Module):
         
         a = a + pt_att 
 
+        # #print(a.shape)torch.Size([4, 8, 256, 256])
+        # #exit()
+
+        # as1, as2, as3, as4 = a.shape
+        # a_ = a.permute(2, 3, 1, 0).reshape(as3*as4, as2, as1)
+        # a_ = self.temporal(a_)
+        # a_ = a_.reshape(as3, as4, as2, as1).permute(3, 2, 0, 1)
+        # a  = a + a_
+
         a = a + square_mask.unsqueeze(-3)
         a = self.softmax(a)
         # torch.save(a.cpu(),'a.pth')
@@ -450,6 +468,15 @@ class InvariantPointAttention(nn.Module):
         # [*, N_res, H, P_v, 3]
         o_pt = permute_final_dims(o_pt, (2, 0, 3, 1))
         o_pt_out_ti = o_pt
+        # # TODO ref
+        # # print(r.to_tensor_7().shape)
+        # ref_r = r.to_tensor_7()[:1].repeat(r.shape[0],1,1)
+        # # print(ref_r.shape)
+        # # print(ref_r[0,1],ref_r[1,1],r.to_tensor_7()[0,1])
+        # ref_r = Rigid.from_tensor_7(ref_r)
+        # # print(ref_r.shape)
+        # # print('='*10)
+        # o_pt_out_ti = ref_r[..., None, None].invert_apply(o_pt_out_ti)
 
         o_pt = r[..., None, None].invert_apply(o_pt)
 
@@ -476,6 +503,8 @@ class InvariantPointAttention(nn.Module):
 
         o_feats = [o, *torch.unbind(o_pt, dim=-1), o_pt_norm_feats, o_pair, *torch.unbind(o_pt_out_ti, dim=-1), o_pt_norm_feats_out_ti]
         # tmp = torch.cat(o_feats, dim=-1).to(dtype=z[0].dtype) # torch.Size([1+Frame, 135, 1344])
+        # print(o_feats.shape)
+        # exit()
 
         # [*, N_res, C_s]
         s = self.linear_out(
@@ -486,24 +515,6 @@ class InvariantPointAttention(nn.Module):
         
         return s
 
-
-
-class IPA_MLP(nn.Module):
-    def __init__(self, input_dim,c):
-        super(IPA_MLP, self).__init__()
-
-        self.c = c
-        self.input_dim=input_dim
-        self.linear_1 = Linear(self.input_dim, self.c, init="relu")
-        self.linear_2 = Linear(self.c, self.c, init="final")
-        self.relu = nn.ReLU()
-
-    def forward(self, s):
-        s = self.linear_1(s)
-        s = self.relu(s)
-        s = self.linear_2(s)
-
-        return s
 
 class TorsionAngles(nn.Module):
     def __init__(self, c, num_torsions, eps=1e-8):
@@ -541,35 +552,6 @@ class TorsionAngles(nn.Module):
         return unnormalized_s, normalized_s
 
 
-class AdaptiveLayerNorm(nn.Module):
-
-    def __init__(
-        self,
-        *,
-        dim,
-        dim_cond
-    ):
-        super().__init__()
-        self.norm = nn.LayerNorm(dim)
-        self.norm_cond = nn.LayerNorm(dim_cond)
-
-        self.to_gamma = nn.Sequential(
-            nn.Linear(dim_cond, dim),
-            nn.Sigmoid()
-        )
-
-        self.to_beta = nn.Linear(dim_cond, dim,bias=False)
-
-    def forward(self,x,cond):
-        # x ['b n d']
-        # cond['b n dc']
-        normed = self.norm(x)
-        normed_cond = self.norm_cond(cond)
-
-        gamma = self.to_gamma(normed_cond)
-        beta = self.to_beta(normed_cond)
-        return normed * gamma + beta
-    
 class ScoreLayer(nn.Module):
     def __init__(self, dim_in, dim_hid, dim_out):
         super(ScoreLayer, self).__init__()
@@ -619,6 +601,37 @@ class BackboneUpdate(nn.Module):
 
         return update
 
+class TimeBlock(nn.Module):
+    def __init__(self, node_dim, time_embed_dim, hidden_dim=None):
+        super(TimeBlock,self).__init__()
+        self.node_dim = node_dim
+        self.time_embed_dim = time_embed_dim
+        if hidden_dim is not  None:
+            self.hidden_dim = hidden_dim
+        else:
+            self.hidden_dim = self.node_dim//2
+        self.time_proj = nn.Sequential(
+                nn.Linear(self.time_embed_dim, 4*self.time_embed_dim),
+                nn.SiLU(),
+                nn.Linear(4*self.time_embed_dim, self.hidden_dim),
+            )
+        self.node_proj = nn.Sequential(
+            nn.LayerNorm(self.node_dim),
+            nn.SiLU(),
+            nn.Linear(self.node_dim, self.hidden_dim),
+        )
+        self.out_prj = nn.Sequential(
+            nn.LayerNorm(self.hidden_dim),
+            nn.SiLU(),
+            nn.Linear(self.hidden_dim, self.node_dim),
+        )
+    def forward(self,node_feature,time_embeddings):
+        time_feat = self.time_proj(time_embeddings)
+        hidden_node_feat = self.node_proj(node_feature)
+        node_feat = self.out_prj(time_feat+hidden_node_feat)
+        out = node_feature+node_feat
+        return out
+
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.0, max_len=40):
@@ -648,6 +661,68 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
+class ConvNet(nn.Module):
+    def __init__(self, dim):
+        super(ConvNet, self).__init__()
+
+        self.conv1 = nn.Sequential(
+                         nn.Conv2d(dim, dim//2, kernel_size=5, padding=2),
+                         nn.ReLU(True),
+                         nn.Conv2d(dim//2, dim, kernel_size=5, padding=2),
+                         nn.ReLU(True))
+
+        self.conv2 = nn.Sequential(
+                         nn.Conv2d(dim, dim//2, kernel_size=5, padding=2),
+                         nn.ReLU(True),
+                         nn.Conv2d(dim//2, dim, kernel_size=5, padding=2),
+                         nn.ReLU(True))
+
+        self.conv3 = nn.Sequential(
+                         nn.Conv2d(dim, dim//2, kernel_size=5, padding=2),
+                         nn.ReLU(True),
+                         nn.Conv2d(dim//2, dim, kernel_size=5, padding=2),
+                         nn.ReLU(True))
+
+        self.conv4 = nn.Sequential(
+                         nn.Conv2d(dim, dim//2, kernel_size=5, padding=2),
+                         nn.ReLU(True),
+                         nn.Conv2d(dim//2, dim, kernel_size=5, padding=2),
+                         nn.ReLU(True))
+
+    def forward(self, x):
+
+        x = x.permute(2, 0, 1).unsqueeze(0)
+
+        x = self.conv1(x) + x
+
+        x = self.conv2(x) + x
+
+        x = self.conv3(x) + x
+
+        x = self.conv4(x) + x
+
+        x = x.squeeze(0).permute(1, 2, 0)
+
+        return x
+
+
+class MyLayerNorm(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.eps = 1e-4
+    def forward(self, x):
+        mean = torch.mean(x, dim=(0, 1, 2), keepdim=True)
+        var = torch.var(x, dim=(0, 1, 2), keepdim=True)
+
+        std = torch.sqrt(var + self.eps)
+
+        #print(x.shape, mean.shape, std.shape)
+        #exit()
+        x =  (x - mean) / std
+
+        return x
+
 class DFOLDIpaScore(nn.Module):
 
     def __init__(self, model_conf, diffuser):
@@ -663,202 +738,163 @@ class DFOLDIpaScore(nn.Module):
         self.unscale_pos = lambda x: x / ipa_conf.coordinate_scaling
         self.unscale_rigids = lambda x: x.apply_trans_fn(self.unscale_pos)
 
-        self.frame_time = self._model_conf.frame_time
-        self.motion_number = self._model_conf.motion_number
-        self.ref_number = self._model_conf.ref_number
-        self.total_time = self.frame_time+self.motion_number+self.ref_number
-
         self.trunk = nn.ModuleDict()
+
         for b in range(ipa_conf.num_blocks):
             self.trunk[f'ipa_{b}'] = InvariantPointAttention(ipa_conf)
-            self.trunk[f'ipa_ln_{b}'] = nn.LayerNorm(ipa_conf.c_s)
-            self.trunk[f'skip_embed_{b}'] = Linear(
-                self._model_conf.node_embed_size,
-                self._ipa_conf.c_skip,
-                init="final"
-            )
-            # referenceNet block
-            tfmr_in = self._ipa_conf.c_s + self._ipa_conf.c_skip
-            tfmr_layer = torch.nn.TransformerEncoderLayer(
-                d_model=tfmr_in*2,
-                nhead=ipa_conf.seq_tfmr_num_heads,
-                dim_feedforward=tfmr_in,
-                batch_first=True,
-                dropout=0.0, #0.0 to 0.1
-                norm_first=True
-            )
-            self.trunk[f'seq_tfmr_{b}'] = torch.nn.TransformerEncoder(tfmr_layer, 1)
-            self.trunk[f'post_tfmr_{b}'] = Linear(tfmr_in, ipa_conf.c_s, init="relu")
-
-
-            # Temporal block
-            if self._ipa_conf.temporal:
-                # self.trunk[f'ipa_temporal_{b}'] = InvariantPointAttention(ipa_conf)
-                if self._ipa_conf.temporal_position_encoding:
-                    # concat the init node
-                    self.trunk[f'seq_tfmr_temporal_position_encoding_{b}'] = PositionalEncoding(d_model=tfmr_in,#tfmr_in self._ipa_conf.c_s
-                                                                                                max_len=self._ipa_conf.temporal_position_max_len)
-                self.trunk[f'skip_temporal_embed_{b}'] = Linear(
-                    self._model_conf.node_embed_size,
-                    self._ipa_conf.c_skip,
-                    init="final"
-                )
-                temporal_tfmr_layer = torch.nn.TransformerEncoderLayer(
-                    d_model=tfmr_in,#tfmr_in  self._ipa_conf.c_s
-                    nhead=ipa_conf.seq_tfmr_num_heads,
-                    dim_feedforward=tfmr_in,#tfmr_in   self._ipa_conf.c_s
-                    batch_first=True,
-                    dropout=0.0,
-                    norm_first=True
-                )
-                self.trunk[f'seq_tfmr_temporal_{b}'] = torch.nn.TransformerEncoder(temporal_tfmr_layer, 1)#ipa_conf.seq_tfmr_num_layers
-                self.trunk[f'post_tfmr_temporal_{b}'] = Linear( tfmr_in, ipa_conf.c_s, init="relu")
-
-
-            self.trunk[f'node_transition_{b}'] = StructureModuleTransition(c=ipa_conf.c_s)
+            self.trunk[f'ln_{b}'] = MyLayerNorm()
             # module for rigids update and egde update
-            self.trunk[f'bb_update_{b}'] = BackboneUpdate(ipa_conf.c_s)
+            self.trunk[f'bb_update_{b}'] = BackboneUpdate(ipa_conf.c_s*5)
 
-            if b < ipa_conf.num_blocks-1:
-                edge_in = self._model_conf.edge_embed_size
-                self.trunk[f'edge_transition_{b}'] = EdgeTransition(
-                    node_embed_size=ipa_conf.c_s,
-                    edge_embed_in=edge_in,
-                    edge_embed_out=self._model_conf.edge_embed_size,
-                )
+        self.trunk[f'conv_0'] = ConvNet(ipa_conf.c_s*5)
+
+        #self.trunk[f'temp_0'] = TempNet(ipa_conf.c_s*4)
+
         # module for angle prediction
-        self.angle_resnet = AngleResnet(c_in=ipa_conf.c_s,c_hidden=ipa_conf.c_s,no_blocks=2,no_angles=7,epsilon=1e-12)
+        self.angle_resnet = AngleResnet(c_in=ipa_conf.c_s*5,c_hidden=ipa_conf.c_s*5,no_blocks=2,no_angles=7,epsilon=1e-12) 
+        # self.atom_embeder = AtomEmbed(model_conf.node_embed_size)
 
+        self.force_embeder = nn.Sequential(
+            nn.Linear(3, model_conf.node_embed_size),
+            nn.SiLU(),
+            nn.Linear(model_conf.node_embed_size,model_conf.node_embed_size),
+            #nn.LayerNorm((9, 40, model_conf.node_embed_size)),
+            MyLayerNorm(),
+            nn.SiLU()
+        )
+        self.vel_embeder = nn.Sequential(
+            nn.Linear(3, model_conf.node_embed_size),
+            nn.SiLU(),
+            nn.Linear(model_conf.node_embed_size,model_conf.node_embed_size),
+            #nn.LayerNorm((9, 40, model_conf.node_embed_size)),
+            MyLayerNorm(),
+            nn.SiLU()
+        )
+        self.index_embeder = nn.Sequential(
+            nn.Linear(1, model_conf.node_embed_size),
+            nn.SiLU(),
+            nn.Linear(model_conf.node_embed_size,model_conf.node_embed_size),
+            #nn.LayerNorm((1, 40, model_conf.node_embed_size)),
+            MyLayerNorm(),
+            nn.SiLU()
+        )
+        self.rigid_embeder = nn.Sequential(
+            nn.Linear(7, model_conf.node_embed_size),
+            nn.SiLU(),
+            nn.Linear(model_conf.node_embed_size,model_conf.node_embed_size),
+            #nn.LayerNorm((9, 40, model_conf.node_embed_size)),
+            MyLayerNorm(),
+            nn.SiLU()
+        )
 
-    def forward(self, node_embed, edge_embed, input_feats,drop_ref=False,is_training=True):
+        self.angle_embeder = nn.Sequential(
+            nn.Linear(14, model_conf.node_embed_size),
+            nn.SiLU(),
+            nn.Linear(model_conf.node_embed_size,model_conf.node_embed_size),
+            MyLayerNorm(),
+            nn.SiLU()
+        )
+
+    def forward(self, init_node_embed, edge_embed, input_feats,drop_ref=False):
         '''
         init_node_embed: [F,N,D] node features from embeder with diffuser t embeddings
         edge_embed: edge features from embeder without diffuser t embeddings, since we update egde features with node features
         input_feats: input infomation from dataloader
         '''
         # # position embedding add in the beginning
-        # initialize the input tensors
-        diffuser_time_t = input_feats['t']
+        # init_node_embed = self.init_time_position(init_node_embed.permute([1,0,2]))
+        # init_node_embed = init_node_embed.permute([1,0,2])
 
-        node_mask = input_feats['res_mask'].type(torch.float32)[:1]
-        diffuse_mask = (1 - input_feats['fixed_mask'][:1].type(torch.float32)) * node_mask
+        # initialize the input tensors
+        diffuer_time_t = input_feats['t']
+        node_mask = input_feats['res_mask'].type(torch.float32)
+        diffuse_mask = (1 - input_feats['fixed_mask'].type(torch.float32)) * node_mask
         edge_mask = node_mask[..., None] * node_mask[..., None, :]
         init_frames = input_feats['rigids_t'].type(torch.float32)
-        curr_rigids = Rigid.from_tensor_7(torch.clone(init_frames))
         init_rigids = Rigid.from_tensor_7(init_frames)
 
-        curr_rigids = self.scale_rigids(curr_rigids) # trans with muliply with 0.1 scale from unit ans to unit nano meter
+        # create reference here
+        nf = input_feats['rigids_0'].shape[0]
 
-        # processing ref and motion rigids 
-        ref_rigids = self.scale_rigids(Rigid.from_tensor_7(input_feats['ref_rigids_0']))
-        motion_rigids = self.scale_rigids(Rigid.from_tensor_7(input_feats['motion_rigids_0']))
+        curr_rigids = torch.cat([input_feats['rigids_0'][:-1], input_feats['rigids_0'][-2:-1]], dim=0) #use reference initialize current prediction
 
-        # processing ref and motion node
-        ref_node = input_feats['ref_node_repr'].unsqueeze(0) * node_mask[..., None]
-        ref_edge = input_feats['ref_edge_repr'].unsqueeze(0)
-        # motion node and egde is same as the reference since no time embedings are introduced
-        motion_node = ref_node.repeat(self.motion_number,1,1) * node_mask[..., None]
-        motion_edge = ref_edge.repeat(self.motion_number,1,1,1) 
+        force = input_feats['force'].to(input_feats['rigids_0'].dtype)
+        force = torch.cat([force[:-1], force[-2:-1]], dim=0) #use reference initialize current prediction
+        force_embed = self.force_embeder(force)
 
-        frame_edge = edge_embed
-        frame_node = node_embed
-        # define init node features
-        frame_node_init = frame_node 
-        ref_node_init = ref_node
-        motion_node_init = motion_node
-        # loop of diffuser block
+        vel = input_feats['vel'].to(input_feats['rigids_0'].dtype)
+        vel = torch.cat([vel[:-1], vel[-2:-1]], dim=0) #use reference initialize current prediction
+        vel_embed = self.vel_embeder(vel)
+
+        node_embed = input_feats['seq_idx'][0:1].unsqueeze(-1)
+        node_embed = node_embed.to(input_feats['node_repr'].dtype)
+        node_embed = self.index_embeder(node_embed).expand(nf, -1, -1)
+
+        node_embed = node_embed + input_feats['expand_node_repr'].clone()
+        edge_embed = input_feats['expand_edge_repr'].clone()
+
+        node_mask = input_feats['res_mask'].type(torch.float32)
+
+  
+        angle = input_feats['torsion_angles_sin_cos'].to(input_feats['rigids_0'].dtype)
+        angle_mask = input_feats['torsion_angles_mask'].to(input_feats['rigids_0'].dtype)
+        angle = (angle * angle_mask.unsqueeze(-1)).to(input_feats['rigids_0'].dtype)
+        angle = torch.cat([angle[:-1], angle[-2:-1]], dim=0) #use reference initialize current prediction
+        na = angle.shape[-2]
+        angle = angle.reshape(nf, -1, na*2)
+        angle_embed = self.angle_embeder(angle)
+
         for b in range(self._ipa_conf.num_blocks):
-            # run referencenet, spatial alignment
-            all_curr_rigids = torch.cat([motion_rigids.to_tensor_7(),ref_rigids.to_tensor_7(),curr_rigids.to_tensor_7()],dim=0)
-            all_node = torch.concat([motion_node,ref_node,frame_node],dim=0)
-            all_node_mask = node_mask.repeat(all_node.shape[0],1)
-            all_node =all_node*all_node_mask[..., None]
-            all_edge_embed = torch.concat([motion_edge,ref_edge,edge_embed],dim=0) * edge_mask[..., None]
-            # all_node_init = all_node
-            
-            all_curr_rigids = Rigid.from_tensor_7(all_curr_rigids)
-            # print(all_node.shape,all_edge_embed.shape,all_curr_rigids.shape,all_node_mask.shape)
-            # exit()
-            all_ipa_embed = self.trunk[f'ipa_{b}'](
-                    all_node,
-                    all_edge_embed,
-                    all_curr_rigids,
-                    all_node_mask)
-            
-            all_node = self.trunk[f'ipa_ln_{b}'](all_node + all_ipa_embed)
 
-            motion_node,ref_node,frame_node = torch.split(all_node, [self.motion_number,self.ref_number,self.frame_time],dim=0)
-            if not drop_ref:
-                # here compute ref and frame node 
-                # through the reference Net
-                spatial_node_with_ref = torch.cat([ref_node,frame_node],dim=0)
-                spatial_node_init_with_ref = torch.cat([ref_node_init,frame_node_init],dim=0)
-                # spatial_node_init_with_ref = ref_node_init.expand([self.ref_number+self.frame_time,-1,-1])
+            spatial_curr_rigids = curr_rigids.clone()
 
-                seq_tfmr_in = torch.cat([spatial_node_with_ref, self.trunk[f'skip_embed_{b}'](spatial_node_init_with_ref)], dim=-1)
-                concatenated_tensor = torch.cat((seq_tfmr_in, seq_tfmr_in[0].repeat(seq_tfmr_in.size(0),1,1)), dim=-1) #torch.Size([4, 58, 640] 
-                #since ref time always equal to 1, just pick index 0
+            #spatial_curr_rigids_norm = spatial_curr_rigids - spatial_curr_rigids[0:1]
+            #rigids_embed_norm = self.rigid_embeder_norm(spatial_curr_rigids_norm)
+            #node_feat_norm = torch.cat([rigids_embed_norm, node_embed, force_embed, vel_embed], dim=-1)
+            #node_feat_norm = self.trunk[f'temp_0'](node_feat_norm)
 
-                seq_tfmr_out = self.trunk[f'seq_tfmr_{b}']( concatenated_tensor, src_key_padding_mask=1 - node_mask.repeat(concatenated_tensor.shape[0],1))
+            rigids_embed = self.rigid_embeder(spatial_curr_rigids)
+            all_ipa_embed = self.trunk[f'ipa_{b}'](node_embed, edge_embed, Rigid.from_tensor_7(spatial_curr_rigids), node_mask)
+            all_ipa_embed = self.trunk[f'ln_{b}'](all_ipa_embed)
+            node_feat = torch.cat([rigids_embed, all_ipa_embed, force_embed, vel_embed, angle_embed], dim=-1)
+            #node_feat = torch.cat([all_ipa_embed, all_ipa_embed, all_ipa_embed], dim=-1)
 
-                seq_tfmr_out = seq_tfmr_out[...,:(self._ipa_conf.c_s + self._ipa_conf.c_skip)]
-                seq_tfmr_out = seq_tfmr_out[self.ref_number:] # drop ref
-                assert seq_tfmr_out.shape[0] == frame_node.shape[0]
-                frame_node = frame_node + self.trunk[f'post_tfmr_{b}'](seq_tfmr_out)
-            else:
-                frame_node = frame_node
+            spatial_curr_rigids = Rigid.from_tensor_7(spatial_curr_rigids)
+            node_feat = self.trunk[f'conv_0'](node_feat)
 
-            # 
-            # run temporal alignment
-            if self._ipa_conf.temporal:
-                # concat motion and frame
-                temporal_node = torch.concat([motion_node,ref_node,frame_node])
-                temporal_node_init_with_motion = torch.cat([motion_node_init,ref_node_init,frame_node_init],dim=0)
+            #node_feat = node_feat + node_feat_norm
 
-                # TODO
-                # here to add the sin-cos embeddings for frame
-                seq_tfmr_in = torch.cat([temporal_node, self.trunk[f'skip_temporal_embed_{b}'](temporal_node_init_with_motion)], dim=-1)
-                seq_tfmr_in = self.trunk[f'seq_tfmr_temporal_position_encoding_{b}'](seq_tfmr_in.permute([1,0,2]))
-                # run temporal alignment
-                seq_tfmr_out = self.trunk[f'seq_tfmr_temporal_{b}']( seq_tfmr_in, src_key_padding_mask=1 - node_mask.repeat(self.ref_number+self.motion_number+self.frame_time,1).permute([1,0])) #torch.Size([58,4,  640])
-                seq_tfmr_out = seq_tfmr_out.permute([1,0,2])
-                # residul connection, post_tfmr_temporal_ is zero-initialized
-                temporal_node = temporal_node + self.trunk[f'post_tfmr_temporal_{b}'](seq_tfmr_out)
-                frame_node = temporal_node[self.motion_number+self.ref_number:]
+            rigid_update = self.trunk[f'bb_update_{b}'](node_feat) 
 
-            # apply MLP for node features
-            all_node = self.trunk[f'node_transition_{b}'](torch.cat([motion_node,ref_node,frame_node],dim=0))
+            rigid_update[:-1] = rigid_update[:-1] * 0.0 # don't update reference
 
-            motion_node,ref_node,frame_node = torch.split(all_node, [self.motion_number,self.ref_number,self.frame_time],dim=0)
-            rigid_update = self.trunk[f'bb_update_{b}'](frame_node * diffuse_mask[..., None])
-
+            curr_rigids = Rigid.from_tensor_7(curr_rigids)
             curr_rigids = curr_rigids.compose_q_update_vec(rigid_update, diffuse_mask[..., None])
+            curr_rigids = curr_rigids.to_tensor_7()
 
-            # [5,N]
-            # update edges with edge features
-            if b < self._ipa_conf.num_blocks-1:
-                all_edge = self.trunk[f'edge_transition_{b}'](all_node,torch.cat([motion_edge,ref_edge,frame_edge],dim=0))
-                edge_embed *= edge_mask[..., None]
-                 # update ref edge
-                motion_edge,ref_edge,frame_edge = torch.split(all_edge, [self.motion_number,self.ref_number,self.frame_time],dim=0)
+            if b == 0:
+                init_node_feat = node_feat.clone()
 
+        unorm_angles, angles = self.angle_resnet(node_feat, init_node_feat)
+
+        curr_rigids = Rigid.from_tensor_7(curr_rigids)
+        
+        # # # 
         rot_score = self.diffuser.calc_rot_score(
             init_rigids.get_rots(),
             curr_rigids.get_rots(),
-            diffuser_time_t
+            diffuer_time_t
         )
         rot_score = rot_score * node_mask[..., None]
-        curr_rigids = self.unscale_rigids(curr_rigids) # scale to angstrom
+
+        curr_rigids = self.unscale_rigids(curr_rigids)
         trans_score = self.diffuser.calc_trans_score(
             init_rigids.get_trans(),
             curr_rigids.get_trans(),
-            diffuser_time_t[:, None, None],
+            diffuer_time_t[:, None, None],
             use_torch=True,
         )
         trans_score = trans_score * node_mask[..., None]
-        # directly predict the angles for side chains with the last layer  node features
-
-        unorm_angles, angles = self.angle_resnet(frame_node, frame_node_init)
         # merge the outputs 
         model_out = {
             'angles': angles,

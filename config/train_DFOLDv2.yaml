@@ -4,27 +4,41 @@ defaults:
   - override hydra/launcher: joblib
 
 data:
-  ref_number: 1
-  motion_number: 2
-  frame_time: 1  # the length of time sequence
-  frame_sample_step: 1 # random  select start index first and  split data with steps
-  
   stage1: False
   time_norm: False
   step_split: null            # Split data into steps and randomly select a start index.
   fix_sample_start: null      # Sample starting from a fixed index (fix_sample_start).
   random_sample_train: False  # If True, samples are random; otherwise, sample windows do not overlap.
+  is_extrapolation: False     # Enable extrapolation mode.
   split_percent: 0.7          # Percentage of data used for extrapolation.
   keep_first: null            # Keep the first N time sequences.
   dynamics: True
-  eval_start_idx: 0           # start index for ref evaluation
-  eval_end_idx: 10            # end index for ref evaluation
-  csv_path: ../examples/atlas_visual_se3_filter.csv # train data path
-  val_csv_path:  ../examples/atlas_visual_se3_filter.csv # val data path
+  # csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/processing_atlas/test_merged_all.csv # train data path
+  # val_csv_path:  /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/processing_atlas/test_merged_all.csv # val data path
+  # # csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_b_38.csv
+  # val_csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_b_38.csv
+  # /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/test_merged_1.csv
+  # cluster_path:  /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/clusters-by-entity-30.txt
+  #csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_B_simulation_1_wj.csv # train data path
+  #val_csv_path:  /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/protein/workspace/chengkaihui/code/DFOLDv2/src/toolbox/processing_atlas/data_csv/4ue8_B_simulation_1_wj.csv # val data path
+  csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/liuce/data_10w/out.csv
+  val_csv_path: /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/public/liuce/data_10w/out.csv
+  frame_time: 1  # the lenght of time sequence
+  frame_sample_step: 1 # random  select start index first and  split data with steps
   filtering:
     max_len: 256
+  #   min_len: 60
+  #   # Selects a subset of examples. Useful for debugging.
+  #   subset: null
+  #   allowed_oligomer: [monomeric]
+  #   max_helix_percent: 1.0
+  #   max_loop_percent: 0.5
+  #   min_beta_percent: -1.0
+  #   rog_quantile: 0.96
   min_t: 0.01
-  num_t: 100 # linespace for reverse diffuser for 0 to 1
+  # samples_per_eval_length: 4
+  # num_eval_lengths: 10
+  num_t: 10 # linespace for reverse diffuser for 0 to 1
 
 diffuser:
   dynamics: ${data.dynamics}
@@ -51,11 +65,8 @@ diffuser:
 model:
   cfg_drop_rate: 0.0
   cfg_drop_in_train: True
-  cfg_gamma: 3.5 # from 1 to 7.5
+  cfg_gamma: 2 # from 1 to 7.5
   frame_time: ${data.frame_time}
-  ref_number: ${data.ref_number}
-  motion_number: ${data.motion_number}
-
   dirtect: False   # seq to temporal structure
   dynamics: ${data.dynamics}
   node_embed_size: 256
@@ -63,6 +74,10 @@ model:
   dropout: 0.0
   embed:
     DFOLDv2_embedder: True
+    # DFOLDv2_embedderv2: False
+    # Embedderv3: False
+    # node_repr_dim: 256
+    # edge_repr_dim: 128
     index_embed_size:  32  # 32 for scratch   64 for fine-tuning model
     aatype_embed_size: 32 # default 64
     embed_self_conditioning: True
@@ -90,8 +105,8 @@ model:
 
 experiment:
   # Experiment metadata
-  name: diffusion
-  base_root: ./debug
+  name: DFOLDv2_Temporal_${model.ipa.temporal}
+  base_root: ../DFOLDv2_res/result_v2_deep_debug
   run_id: null
   training: True
 
@@ -102,8 +117,8 @@ experiment:
   log_freq: 100
   batch_size: 4
   eval_batch_size: 1
-  num_loader_workers: 5
-  num_epoch: 300_000 #500
+  num_loader_workers: 4
+  num_epoch: 300000 #500
   learning_rate: 0.0001
   max_squared_res: 360000
   prefetch_factor: 100
@@ -128,8 +143,8 @@ experiment:
   warm_start: null 
 
   trans_loss_weight: 1.0
-  rot_loss_weight: 1.0 #1.0
-  rot_loss_t_threshold: 0.0
+  rot_loss_weight: 0.5 #1.0
+  rot_loss_t_threshold: 0.2
   separate_rot_loss: False
   trans_x0_threshold: 1.0
   coordinate_scaling: ${diffuser.r3.coordinate_scaling}
