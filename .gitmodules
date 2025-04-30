@@ -1,0 +1,3 @@
+[submodule "applications/4d_diffusion"]
+	path = applications/4d_diffusion
+	url = https://github.com/fudan-generative-vision/AlphaFolding.git
