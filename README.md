@@ -142,6 +142,7 @@ For ease of use, we have also provided segmented versions of the data (directori
 ## Applications
 1. [Physics condition](./applications/physics_condition/): we extend the SE(3) diffusion model to incorporate sequence features and physical properties for the task of trajectory prediction.
 2. [4D diffusion](./applications/4d_diffusion/): we introduce a 4D diffusion with motion alignment  to learn dynamic protein structures.
+3. [Conformation sampling](./applications/conformation_sampling/): we introduce a 4D diffusion to sample diverse protein conformations.
 
 #### Acknowledgements
 We would like to thank the contributors to the [OpenFold](https://github.com/aqlaboratory/openfold), [OmegaFold](https://github.com/HeliXonProtein/OmegaFold).  

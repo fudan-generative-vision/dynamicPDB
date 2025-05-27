@@ -1,0 +1,10 @@
+defaults:
+  - base
+
+experiment:
+  name: pure_dsm
+  separate_rot_loss: False
+
+hydra:
+  sweeper:
+    params:
