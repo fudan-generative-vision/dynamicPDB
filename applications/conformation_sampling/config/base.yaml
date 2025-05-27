@@ -1,0 +1,128 @@
+# Default or base configuration for SE(3) diffusion experiments.
+
+defaults:
+  - override hydra/launcher: joblib
+
+data:
+  # CSV for path and metadata to training examples.
+  csv_path: ./data/processed_pdb/metadata.csv
+  cluster_path: ./data/processed_pdb/clusters-by-entity-30.txt
+  filtering:
+    max_len: 512
+    min_len: 60
+    # Selects a subset of examples. Useful for debugging.
+    subset: null
+    allowed_oligomer: [monomeric]
+    max_helix_percent: 1.0
+    max_loop_percent: 0.5
+    min_beta_percent: -1.0
+    rog_quantile: 0.96
+  min_t: 0.01
+  samples_per_eval_length: 4
+  num_eval_lengths: 10
+  num_t: 100
+
+diffuser:
+  diffuse_trans: True
+  diffuse_rot: True
+
+  # R(3) diffuser arguments
+  r3:
+    min_b: 0.1
+    max_b: 20.0
+    coordinate_scaling: 0.1
+
+  # SO(3) diffuser arguments
+  so3:
+    num_omega: 1000
+    num_sigma: 1000
+    min_sigma: 0.1
+    max_sigma: 1.5
+    schedule: logarithmic
+    cache_dir: .cache/
+    use_cached_score: False
+
+model:
+  node_embed_size: 256
+  edge_embed_size: 128
+  dropout: 0.0
+  embed:
+    index_embed_size: 32
+    aatype_embed_size: 64
+    embed_self_conditioning: True
+    num_bins: 22
+    min_bin: 1e-5
+    max_bin: 20.0
+  ipa:
+    c_s: ${model.node_embed_size}
+    c_z: ${model.edge_embed_size}
+    c_hidden: 256
+    c_skip: 64
+    no_heads: 8
+    no_qk_points: 8
+    no_v_points: 12
+    seq_tfmr_num_heads: 4
+    seq_tfmr_num_layers: 2
+    num_blocks: 4
+    coordinate_scaling: ${diffuser.r3.coordinate_scaling}
+
+experiment:
+  # Experiment metadata
+  name: baseline
+  run_id: null
+
+  #training mode
+  use_ddp : False
+
+  # Training arguments
+  log_freq: 1000
+  batch_size: 256
+  eval_batch_size: ${data.samples_per_eval_length}
+  num_loader_workers: 5
+  num_epoch: 500_000
+  learning_rate: 0.0001
+  max_squared_res: 500000
+  prefetch_factor: 100
+  use_gpu: True
+  num_gpus: 2
+  sample_mode: cluster_time_batch
+
+  # Wandb logging
+  wandb_dir: ./
+  use_wandb: False
+
+  # How many steps to checkpoint between.
+  ckpt_freq: 10000
+  # Take early checkpoint at step 100. Helpful for catching eval bugs early.
+  early_ckpt: True
+
+  # Checkpoint directory to warm start from.
+  warm_start: null
+  use_warm_start_conf: False
+  ckpt_dir: ./ckpt/
+
+  # Loss weights.
+  trans_loss_weight: 1.0
+  rot_loss_weight: 0.5
+  rot_loss_t_threshold: 0.2
+  separate_rot_loss: True
+  trans_x0_threshold: 1.0
+  coordinate_scaling: ${diffuser.r3.coordinate_scaling}
+  bb_atom_loss_weight: 1.0
+  bb_atom_loss_t_filter: 0.25
+  dist_mat_loss_weight: 1.0
+  dist_mat_loss_t_filter: 0.25
+  aux_loss_weight: 0.25
+
+  # Evaluation.
+  eval_dir: ./eval_outputs
+  noise_scale: 1.0
+  # Filled in during training.
+  num_parameters: null
+
+hydra:
+  sweeper:
+    params:
+      # Example of hydra multi run and wandb.
+      experiment.name: use_wandb
+      experiment.use_wandb: True

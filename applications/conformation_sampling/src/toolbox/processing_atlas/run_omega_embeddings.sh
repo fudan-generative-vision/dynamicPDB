@@ -1,0 +1,2 @@
+cd /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/workspace/chengkaihui/code/D-FOLD/ckh_tool/processing_atlas/
+python extract_embedding.py --num_workers $WORLD_SIZE --worker_id $RANK --omegafold_num_recycling 1 --out_dir_root /cpfs01/projects-HDD/cfff-6f3a36a0cd1e_HDD/zsy_43187/protein/datasets/atlas/embeddings/OmegaFold_GeoFormer_recycling_1
