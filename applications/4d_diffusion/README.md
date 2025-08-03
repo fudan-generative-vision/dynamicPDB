@@ -283,7 +283,7 @@ option:
 
 Follow [Data Preparation](#Data-Preparation) to get training data ready, and update the data `.csv` path in configuration `YAML` files or change it in the training scripts. Start training with the following command:
 
-```shell
+```bash
 bash applications/4d_diffusion/scripts/run_train.sh
 ```
 
