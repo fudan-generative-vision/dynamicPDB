@@ -59,7 +59,7 @@ def main():
             else:
                 # logger.error("Uncaught error")
                 raise e
-        # np.savez(embeddings_path, node_repr=node_results[0], edge_repr=edge_results[0])
+        np.savez(embeddings_path, node_repr=node_results[0], edge_repr=edge_results[0])
 
     print(splits, 'DONE')
     print('Skipped', skipping)
